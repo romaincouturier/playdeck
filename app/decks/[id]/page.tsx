@@ -1,0 +1,66 @@
+import Link from 'next/link'
+import { getDeck, getCards } from './actions'
+import { CardUpload } from '@/components/card-upload'
+import { CardGrid } from '@/components/card-grid'
+import { Button } from '@/components/ui/button'
+import { ArrowLeft } from 'lucide-react'
+
+interface PageProps {
+  params: Promise<{ id: string }>
+}
+
+export default async function DeckDetailPage({ params }: PageProps) {
+  const { id } = await params
+  const deck = await getDeck(id)
+  const cards = await getCards(id)
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <header className="border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center gap-4">
+            <Link href="/decks">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold">{deck.name}</h1>
+              {deck.description && (
+                <p className="text-sm text-muted-foreground">
+                  {deck.description}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8">
+        <div className="space-y-8">
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Ajouter une carte</h2>
+            <CardUpload deckId={id} cardCount={cards.length} />
+          </div>
+
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">
+                Cartes du deck ({cards.length}/500)
+              </h2>
+            </div>
+            {cards.length === 0 ? (
+              <div className="text-center py-16 border-2 border-dashed rounded-lg">
+                <p className="text-muted-foreground">
+                  Aucune carte dans ce deck. Ajoutez-en une ci-dessus !
+                </p>
+              </div>
+            ) : (
+              <CardGrid cards={cards} deckId={id} />
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}
