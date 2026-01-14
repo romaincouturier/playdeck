@@ -196,22 +196,14 @@ npm run lint
 
 ## Troubleshooting
 
-### Problème de connexion à Supabase
+**🔧 Problèmes d'affichage des images, d'upload ou d'authentification ?**
 
-- Vérifiez que vos variables d'environnement sont correctes
-- Vérifiez que le projet Supabase est actif
-- Vérifiez que vous avez exécuté le script SQL
-
-### Les images ne s'affichent pas
-
-- Vérifiez que le bucket `card-images` existe
-- Vérifiez que les politiques de stockage sont configurées
-- Vérifiez la console du navigateur pour les erreurs
-
-### Erreurs RLS (Row Level Security)
-
-- Assurez-vous que toutes les politiques RLS du fichier `schema.sql` sont bien créées
-- Vérifiez que vous êtes bien connecté
+Consultez le **[Guide de Dépannage Complet](TROUBLESHOOTING.md)** qui couvre :
+- 🖼️ Les images des cartes ne s'affichent pas
+- 🔐 Problèmes d'authentification
+- 📁 Problèmes d'upload
+- 🚫 Erreurs RLS (Row Level Security)
+- Et plus encore...
 
 ## Prochaines Étapes (Après MVP)
 
