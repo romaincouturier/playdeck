@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb', // Limite augmentée pour l'upload d'images de cartes
+    },
+  },
 };
 
 export default nextConfig;

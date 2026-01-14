@@ -18,11 +18,21 @@ export function CardUpload({ deckId, cardCount }: CardUploadProps) {
   const router = useRouter()
 
   const handleFileUpload = async (file: File) => {
+    // Vérifier que c'est une image
     if (!file.type.startsWith('image/')) {
       alert('Veuillez sélectionner une image')
       return
     }
 
+    // Vérifier la taille du fichier (10 MB max)
+    const maxSize = 10 * 1024 * 1024 // 10 MB en bytes
+    if (file.size > maxSize) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(2)
+      alert(`L'image est trop grande (${sizeMB} MB). La taille maximale est de 10 MB.\n\nConseil : Réduisez la taille de votre image avant de l'uploader.`)
+      return
+    }
+
+    // Vérifier le nombre de cartes
     if (cardCount >= 500) {
       alert('Le deck a atteint la limite de 500 cartes')
       return
