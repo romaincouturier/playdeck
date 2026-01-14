@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import { deleteCard } from '@/app/decks/[id]/actions'
 import { Button } from '@/components/ui/button'
+import { CardImage } from '@/components/card-image'
 import { Trash2 } from 'lucide-react'
 
 interface Card {
@@ -46,12 +46,10 @@ export function CardGrid({ cards, deckId }: CardGridProps) {
           key={card.id}
           className="group relative aspect-[2/3] rounded-lg overflow-hidden border bg-card shadow-sm hover:shadow-lg transition-shadow"
         >
-          <Image
+          <CardImage
             src={card.image_url}
             alt={`Carte ${card.position + 1}`}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw"
+            position={card.position}
           />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
             <Button
