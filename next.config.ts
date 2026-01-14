@@ -6,6 +6,15 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '10mb', // Limite augmentée pour l'upload d'images de cartes
     },
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
+  },
 };
 
 export default nextConfig;
