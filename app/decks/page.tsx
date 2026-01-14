@@ -3,7 +3,7 @@ import { getDecks, signOut } from './actions'
 import { CreateDeckDialog } from '@/components/create-deck-dialog'
 import { DeckCard } from '@/components/deck-card'
 import { Button } from '@/components/ui/button'
-import { LogOut } from 'lucide-react'
+import { LogOut, Plus, Users } from 'lucide-react'
 
 export default async function DecksPage() {
   const decks = await getDecks()
@@ -13,12 +13,26 @@ export default async function DecksPage() {
       <header className="border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold">Mes Decks</h1>
-          <form action={signOut}>
-            <Button variant="outline" size="sm">
-              <LogOut className="mr-2 h-4 w-4" />
-              Déconnexion
-            </Button>
-          </form>
+          <div className="flex items-center gap-2">
+            <Link href="/games/create">
+              <Button variant="default" size="sm">
+                <Plus className="mr-2 h-4 w-4" />
+                Créer une partie
+              </Button>
+            </Link>
+            <Link href="/games/join">
+              <Button variant="outline" size="sm">
+                <Users className="mr-2 h-4 w-4" />
+                Rejoindre
+              </Button>
+            </Link>
+            <form action={signOut}>
+              <Button variant="outline" size="sm">
+                <LogOut className="mr-2 h-4 w-4" />
+                Déconnexion
+              </Button>
+            </form>
+          </div>
         </div>
       </header>
 

@@ -10,15 +10,29 @@ Application Next.js 15 pour gérer vos decks de cartes avec authentification et 
 - **UI Components**: Shadcn/ui
 - **Backend**: Supabase (Auth + Database + Storage)
 
-## Fonctionnalités (MVP - ÉTAPE 1)
+## Fonctionnalités
+
+### ÉTAPE 1 - MVP : Gestion des Decks ✅
 
 - ✅ Authentification (inscription/connexion) avec Supabase Auth
 - ✅ Gestion des decks (créer, lister, dupliquer, supprimer)
 - ✅ Gestion des cartes (upload d'images, affichage, suppression)
 - ✅ Limite de 500 cartes par deck
-- ✅ Upload d'images par glisser-déposer ou bouton
+- ✅ Upload multiple d'images par glisser-déposer ou bouton
 - ✅ Design responsive (mobile, tablette, desktop)
 - ✅ Mode sombre automatique
+
+### ÉTAPE 2 - Jeu Multijoueur ✅
+
+- ✅ Création de parties avec code unique (6 caractères)
+- ✅ Rejoindre une partie avec un code
+- ✅ Salle d'attente (lobby) avec liste des joueurs en temps réel
+- ✅ Distribution automatique des cartes au démarrage
+- ✅ Plateau de jeu avec pioche, défausse et main du joueur
+- ✅ Actions de jeu : piocher, jouer une carte, passer le tour
+- ✅ Synchronisation temps réel avec Supabase Realtime
+- ✅ Gestion des tours de jeu
+- ✅ 2 à 6 joueurs par partie
 
 ## Installation
 
@@ -46,6 +60,8 @@ npm install
 
 #### B. Configurer la base de données
 
+**Schéma de base (ÉTAPE 1) :**
+
 1. Dans votre projet Supabase, allez dans **SQL Editor**
 2. Copiez le contenu du fichier `supabase/schema.sql`
 3. Collez-le dans l'éditeur SQL et exécutez-le
@@ -54,6 +70,17 @@ npm install
    - Les politiques de sécurité RLS (Row Level Security)
    - Le bucket de stockage `card-images`
    - Les politiques de stockage
+
+**Schéma de jeu multijoueur (ÉTAPE 2) :**
+
+1. Dans le même **SQL Editor**
+2. Copiez le contenu du fichier `supabase/game-schema.sql`
+3. Collez-le dans l'éditeur SQL et exécutez-le
+4. Cela créera :
+   - Les tables `games`, `game_players`, et `game_cards`
+   - Les politiques RLS pour les parties
+   - Les fonctions `generate_game_code()` et `distribute_cards()`
+   - Les indexes pour les performances
 
 #### C. Configurer le stockage
 
@@ -98,6 +125,14 @@ playdeck/
 │   │   │   └── page.tsx    # Page détail du deck
 │   │   ├── actions.ts      # Actions serveur pour les decks
 │   │   └── page.tsx        # Liste des decks
+│   ├── games/              # Pages de jeu multijoueur
+│   │   ├── [id]/           # Pages d'une partie
+│   │   │   ├── lobby/      # Salle d'attente
+│   │   │   ├── actions.ts  # Actions de jeu (piocher, jouer, etc.)
+│   │   │   └── page.tsx    # Plateau de jeu
+│   │   ├── create/         # Création de partie
+│   │   ├── join/           # Rejoindre une partie
+│   │   └── actions.ts      # Actions de gestion des parties
 │   ├── login/              # Page de connexion
 │   │   └── page.tsx
 │   ├── globals.css         # Styles globaux + variables Tailwind
@@ -106,24 +141,30 @@ playdeck/
 ├── components/
 │   ├── ui/                 # Composants UI Shadcn
 │   ├── card-grid.tsx       # Grille d'affichage des cartes
-│   ├── card-upload.tsx     # Composant d'upload de cartes
+│   ├── card-image.tsx      # Affichage d'image avec gestion d'erreur
+│   ├── card-upload.tsx     # Composant d'upload multiple de cartes
 │   ├── create-deck-dialog.tsx  # Dialog de création de deck
-│   └── deck-card.tsx       # Carte d'affichage d'un deck
+│   ├── create-game-form.tsx    # Formulaire de création de partie
+│   ├── deck-card.tsx       # Carte d'affichage d'un deck
+│   ├── game-board.tsx      # Plateau de jeu avec Realtime
+│   ├── game-lobby.tsx      # Lobby avec liste des joueurs Realtime
+│   └── join-game-form.tsx  # Formulaire pour rejoindre une partie
 ├── lib/
 │   ├── supabase/
 │   │   ├── client.ts       # Client Supabase côté navigateur
 │   │   └── server.ts       # Client Supabase côté serveur
 │   └── utils.ts            # Utilitaires (cn)
 ├── types/
-│   └── database.types.ts   # Types TypeScript pour la BDD
+│   └── database.types.ts   # Types TypeScript pour la BDD (avec tables de jeu)
 ├── supabase/
-│   └── schema.sql          # Schéma de base de données
+│   ├── schema.sql          # Schéma de base (decks/cards)
+│   └── game-schema.sql     # Schéma du jeu multijoueur
 └── proxy.ts                # Proxy d'authentification (Next.js 15)
 ```
 
 ## Base de Données
 
-### Tables
+### Tables - Gestion des Decks
 
 **decks**
 - `id` (UUID, PK)
@@ -136,6 +177,35 @@ playdeck/
 - `id` (UUID, PK)
 - `deck_id` (UUID, FK vers decks)
 - `image_url` (TEXT)
+- `position` (INTEGER)
+- `created_at` (TIMESTAMP)
+
+### Tables - Jeu Multijoueur
+
+**games**
+- `id` (UUID, PK)
+- `host_id` (UUID, FK vers auth.users)
+- `deck_id` (UUID, FK vers decks)
+- `code` (TEXT, unique) - Code à 6 caractères
+- `status` (TEXT) - 'waiting', 'playing', 'finished'
+- `max_players` (INTEGER) - 2 à 6
+- `current_turn_player_id` (UUID, nullable)
+- `created_at`, `started_at`, `finished_at` (TIMESTAMP)
+
+**game_players**
+- `id` (UUID, PK)
+- `game_id` (UUID, FK vers games)
+- `user_id` (UUID, FK vers auth.users)
+- `player_order` (INTEGER) - Ordre de jeu
+- `is_host` (BOOLEAN)
+- `joined_at` (TIMESTAMP)
+
+**game_cards**
+- `id` (UUID, PK)
+- `game_id` (UUID, FK vers games)
+- `card_id` (UUID, FK vers cards)
+- `location` (TEXT) - 'deck', 'hand', 'discard'
+- `owner_user_id` (UUID, nullable, FK vers auth.users)
 - `position` (INTEGER)
 - `created_at` (TIMESTAMP)
 
@@ -164,9 +234,10 @@ playdeck/
 ### 3. Ajouter des cartes
 
 1. Cliquez sur un deck pour voir ses détails
-2. Glissez-déposez une image ou cliquez sur "Sélectionner une image"
-3. L'image sera uploadée et ajoutée au deck
-4. Maximum 500 cartes par deck
+2. Glissez-déposez des images ou cliquez sur "Sélectionner des images"
+3. Vous pouvez sélectionner plusieurs images à la fois
+4. Les images seront uploadées avec indication de progression
+5. Maximum 500 cartes par deck
 
 ### 4. Gérer les cartes
 
@@ -177,6 +248,39 @@ playdeck/
 
 - **Dupliquer** : Menu ⋮ → Dupliquer (copie le deck et toutes ses cartes)
 - **Supprimer** : Menu ⋮ → Supprimer (supprime le deck et toutes ses cartes)
+
+### 6. Créer une partie multijoueur
+
+1. Depuis la page des decks, cliquez sur "Créer une partie"
+2. Sélectionnez un deck (doit contenir au moins une carte)
+3. Choisissez le nombre maximum de joueurs (2 à 6)
+4. Cliquez sur "Créer la partie"
+5. Un code unique à 6 caractères sera généré
+6. Partagez ce code avec les autres joueurs
+
+### 7. Rejoindre une partie
+
+1. Cliquez sur "Rejoindre" dans l'en-tête
+2. Entrez le code à 6 caractères de la partie
+3. Cliquez sur "Rejoindre"
+4. Vous serez redirigé vers la salle d'attente
+
+### 8. Jouer
+
+**Dans la salle d'attente :**
+- L'hôte peut démarrer la partie quand il y a au moins 2 joueurs
+- Les joueurs qui rejoignent apparaissent en temps réel
+- Tout joueur peut quitter avant le démarrage
+
+**Pendant la partie :**
+- Les cartes sont automatiquement distribuées (5 par joueur)
+- Le premier joueur commence son tour
+- **Actions disponibles pendant votre tour :**
+  - **Piocher** : Prendre une carte de la pioche
+  - **Jouer une carte** : Cliquer sur une carte de votre main pour la défausser
+  - **Passer le tour** : Terminer votre tour
+- **Synchronisation en temps réel** : Tous les joueurs voient les actions instantanément
+- L'hôte peut terminer la partie à tout moment
 
 ## Scripts Disponibles
 
@@ -205,12 +309,17 @@ Consultez le **[Guide de Dépannage Complet](TROUBLESHOOTING.md)** qui couvre :
 - 🚫 Erreurs RLS (Row Level Security)
 - Et plus encore...
 
-## Prochaines Étapes (Après MVP)
+## Améliorations Possibles
 
-- Jeu multijoueur en temps réel
-- Mélange et distribution de cartes
-- Gestion de plusieurs joueurs
-- WebSockets pour la synchronisation temps réel
+- 📊 Statistiques des parties (historique, victoires, etc.)
+- 🎮 Règles de jeu personnalisables
+- 💬 Chat intégré dans les parties
+- 🏆 Système de classement/leaderboard
+- 🎨 Personnalisation des arrière-plans de cartes
+- 📱 Application mobile (React Native)
+- 🔔 Notifications pour invitations de parties
+- 👥 Système d'amis
+- 🎯 Modes de jeu différents (timer, challenges, etc.)
 
 ## Technologies Utilisées
 
