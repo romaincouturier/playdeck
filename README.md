@@ -118,7 +118,7 @@ playdeck/
 │   └── database.types.ts   # Types TypeScript pour la BDD
 ├── supabase/
 │   └── schema.sql          # Schéma de base de données
-└── middleware.ts           # Middleware d'authentification
+└── proxy.ts                # Proxy d'authentification (Next.js 15)
 ```
 
 ## Base de Données
