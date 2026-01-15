@@ -67,6 +67,9 @@ export function GameBoard({
       const counts: Record<string, number> = {}
 
       for (const player of players) {
+        // Skip guests - they don't have cards
+        if (!player.user_id) continue
+
         const { count } = await supabase
           .from('game_cards')
           .select('*', { count: 'exact', head: true })
@@ -178,6 +181,9 @@ export function GameBoard({
           // Recharger les comptes de cartes des joueurs
           const counts: Record<string, number> = {}
           for (const player of players) {
+            // Skip guests - they don't have cards
+            if (!player.user_id) continue
+
             const { count } = await supabase
               .from('game_cards')
               .select('*', { count: 'exact', head: true })
@@ -293,34 +299,41 @@ export function GameBoard({
               <h2 className="font-semibold">Joueurs</h2>
             </div>
             <div className="flex flex-wrap gap-2">
-              {players.map((player, index) => (
-                <div
-                  key={player.user_id}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
-                    player.user_id === userId
-                      ? 'bg-primary/10 border border-primary/20'
-                      : 'bg-muted'
-                  } ${
-                    currentTurnPlayerId === player.user_id ? 'ring-2 ring-green-500' : ''
-                  }`}
-                >
-                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold">
-                    {index + 1}
+              {players.map((player, index) => {
+                const playerId = player.user_id || player.guest_session_id || ''
+                const isCurrentUser = player.user_id === userId
+                const playerName = player.guest_name || (isCurrentUser ? 'Vous' : `Joueur ${index + 1}`)
+                const cardCount = player.user_id ? (playerCardCounts[player.user_id] || 0) : 0
+
+                return (
+                  <div
+                    key={playerId}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+                      isCurrentUser
+                        ? 'bg-primary/10 border border-primary/20'
+                        : 'bg-muted'
+                    } ${
+                      currentTurnPlayerId === player.user_id ? 'ring-2 ring-green-500' : ''
+                    }`}
+                  >
+                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">
+                        {playerName}
+                        {player.is_host && <Crown className="inline h-3 w-3 ml-1 text-amber-600" />}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {cardCount} carte(s)
+                      </p>
+                    </div>
+                    {currentTurnPlayerId === player.user_id && (
+                      <ArrowRight className="h-4 w-4 text-green-500" />
+                    )}
                   </div>
-                  <div>
-                    <p className="text-sm font-medium">
-                      {player.user_id === userId ? 'Vous' : `Joueur ${index + 1}`}
-                      {player.is_host && <Crown className="inline h-3 w-3 ml-1 text-amber-600" />}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {playerCardCounts[player.user_id] || 0} carte(s)
-                    </p>
-                  </div>
-                  {currentTurnPlayerId === player.user_id && (
-                    <ArrowRight className="h-4 w-4 text-green-500" />
-                  )}
-                </div>
-              ))}
+                )
+              })}
             </div>
           </Card>
 
