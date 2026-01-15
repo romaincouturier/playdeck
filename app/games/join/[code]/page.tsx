@@ -28,7 +28,7 @@ export default async function JoinGameWithCodePage({ params }: JoinGameWithCodeP
 
   if (error || !game) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="min-h-screen flex items-center justify-center bg-st-gray dark:bg-st-anthracite">
         <div className="max-w-md w-full mx-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
             <h1 className="text-2xl font-bold mb-4">Partie introuvable</h1>
@@ -69,7 +69,7 @@ export default async function JoinGameWithCodePage({ params }: JoinGameWithCodeP
   // Vérifier que la partie accepte encore des joueurs
   if (game.status !== 'waiting') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="min-h-screen flex items-center justify-center bg-st-gray dark:bg-st-anthracite">
         <div className="max-w-md w-full mx-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
             <h1 className="text-2xl font-bold mb-4">Partie déjà commencée</h1>
@@ -96,7 +96,7 @@ export default async function JoinGameWithCodePage({ params }: JoinGameWithCodeP
 
   if (players && players.length >= game.max_players) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="min-h-screen flex items-center justify-center bg-st-gray dark:bg-st-anthracite">
         <div className="max-w-md w-full mx-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
             <h1 className="text-2xl font-bold mb-4">Partie complète</h1>
@@ -127,7 +127,7 @@ export default async function JoinGameWithCodePage({ params }: JoinGameWithCodeP
   if (joinError) {
     console.error('Error joining game:', joinError)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="min-h-screen flex items-center justify-center bg-st-gray dark:bg-st-anthracite">
         <div className="max-w-md w-full mx-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
             <h1 className="text-2xl font-bold mb-4">Erreur</h1>

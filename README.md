@@ -1,6 +1,13 @@
-# PlayDeck - Gestionnaire de Decks de Cartes
+# PlayDeck - Jeu de Cartes Multijoueur
 
-Application Next.js 15 pour gérer vos decks de cartes avec authentification et stockage cloud.
+Application Next.js 15 pour gérer vos decks de cartes et jouer en multijoueur avec authentification et stockage cloud.
+
+## 🎨 Charte Graphique
+
+**Couleurs SuperTilt :**
+- **Jaune** : #ffd100 (Pantone 109C)
+- **Anthracite** : #101820 (Pantone Black 6C)
+- **Gris** : #f2f4f4
 
 ## Stack Technique
 

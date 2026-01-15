@@ -44,7 +44,7 @@ export function JoinGameWithCode({ gameCode, gameStatus }: JoinGameWithCodeProps
 
   if (gameStatus !== 'waiting') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="min-h-screen flex items-center justify-center bg-st-gray dark:bg-st-anthracite">
         <div className="max-w-md w-full mx-4">
           <Card className="p-8 text-center">
             <h1 className="text-2xl font-bold mb-4">Partie déjà commencée</h1>
@@ -58,7 +58,7 @@ export function JoinGameWithCode({ gameCode, gameStatus }: JoinGameWithCodeProps
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-st-gray dark:bg-st-anthracite p-4">
       <div className="max-w-md w-full space-y-6">
         {/* En-tête avec le code de la partie */}
         <div className="text-center">

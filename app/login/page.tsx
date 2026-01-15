@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Logo } from '@/components/logo'
+import { Footer } from '@/components/footer'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -51,8 +53,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex flex-col bg-st-gray dark:bg-st-anthracite">
+      <div className="flex-1 flex flex-col items-center justify-center p-4">
+        <div className="mb-8">
+          <Logo className="h-16" />
+        </div>
+        <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl">
             {isSignUp ? 'Créer un compte' : 'Connexion'}
@@ -113,6 +119,8 @@ export default function LoginPage() {
           </form>
         </CardContent>
       </Card>
+      </div>
+      <Footer />
     </div>
   )
 }

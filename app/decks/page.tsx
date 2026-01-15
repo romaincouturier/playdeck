@@ -4,15 +4,17 @@ import { CreateDeckDialog } from '@/components/create-deck-dialog'
 import { DeckCard } from '@/components/deck-card'
 import { Button } from '@/components/ui/button'
 import { LogOut, Plus, Users } from 'lucide-react'
+import { Logo } from '@/components/logo'
+import { Footer } from '@/components/footer'
 
 export default async function DecksPage() {
   const decks = await getDecks()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <header className="border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm sticky top-0 z-10">
+    <div className="min-h-screen bg-st-gray dark:bg-st-anthracite">
+      <header className="border-b bg-white/80 dark:bg-st-anthracite/80 backdrop-blur-sm sticky top-0 z-10 border-st-gray dark:border-st-anthracite">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Mes Decks</h1>
+          <Logo className="h-8" />
           <div className="flex items-center gap-2">
             <Link href="/games/create">
               <Button variant="default" size="sm">
@@ -78,6 +80,7 @@ export default async function DecksPage() {
           </div>
         )}
       </main>
+      <Footer />
     </div>
   )
 }

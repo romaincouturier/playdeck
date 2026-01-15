@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { CreateGameForm } from '@/components/create-game-form'
+import { Footer } from '@/components/footer'
+import { Logo } from '@/components/logo'
 
 export default async function CreateGamePage() {
   const supabase = await createClient()
@@ -41,13 +43,15 @@ export default async function CreateGamePage() {
   }) || []
 
   return (
-    <div className="container mx-auto py-8 max-w-2xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Créer une partie</h1>
-        <p className="text-muted-foreground">
-          Choisissez un deck et configurez votre partie
-        </p>
-      </div>
+    <div className="min-h-screen flex flex-col bg-st-gray dark:bg-st-anthracite">
+      <div className="flex-1 container mx-auto py-8 max-w-2xl">
+        <div className="mb-8 text-center">
+          <Logo className="h-12 mb-6 mx-auto" />
+          <h1 className="text-3xl font-bold mb-2">Créer une partie</h1>
+          <p className="text-muted-foreground">
+            Choisissez un deck et configurez votre partie
+          </p>
+        </div>
 
       {validDecks.length === 0 ? (
         <div className="text-center py-12">
@@ -64,6 +68,8 @@ export default async function CreateGamePage() {
       ) : (
         <CreateGameForm decks={validDecks} />
       )}
+      </div>
+      <Footer />
     </div>
   )
 }

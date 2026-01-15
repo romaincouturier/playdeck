@@ -3,6 +3,7 @@ import { getDeck, getCards } from './actions'
 import { CardUpload } from '@/components/card-upload'
 import { CardGrid } from '@/components/card-grid'
 import { Button } from '@/components/ui/button'
+import { Footer } from '@/components/footer'
 import { ArrowLeft } from 'lucide-react'
 
 interface PageProps {
@@ -15,8 +16,8 @@ export default async function DeckDetailPage({ params }: PageProps) {
   const cards = await getCards(id)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <header className="border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm sticky top-0 z-10">
+    <div className="min-h-screen bg-st-gray dark:bg-st-anthracite flex flex-col">
+      <header className="border-b bg-white/80 dark:bg-st-anthracite/80 backdrop-blur-sm sticky top-0 z-10 border-st-gray dark:border-st-anthracite">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Link href="/decks">
@@ -61,6 +62,7 @@ export default async function DeckDetailPage({ params }: PageProps) {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   )
 }
