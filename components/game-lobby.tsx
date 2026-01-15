@@ -46,7 +46,7 @@ export function GameLobby({
   const router = useRouter()
   const supabase = createClient()
 
-  // Charger les joueurs au démarrage
+  // Charger les joueurs au démarrage et toutes les 3 secondes (fallback)
   useEffect(() => {
     const loadPlayers = async () => {
       const { data, error } = await supabase
@@ -61,13 +61,43 @@ export function GameLobby({
       }
     }
 
+    // Charger immédiatement
     loadPlayers()
+
+    // Polling toutes les 3 secondes comme fallback
+    const interval = setInterval(loadPlayers, 3000)
+
+    return () => clearInterval(interval)
   }, [gameId, supabase])
 
-  // Écouter les changements en temps réel
+  // Vérifier le statut de la partie toutes les 3 secondes (fallback)
   useEffect(() => {
+    const checkGameStatus = async () => {
+      const { data } = await supabase
+        .from('games')
+        .select('status')
+        .eq('id', gameId)
+        .single()
+
+      if (data && data.status === 'playing') {
+        router.push(`/games/${gameId}`)
+      }
+    }
+
+    const interval = setInterval(checkGameStatus, 3000)
+    return () => clearInterval(interval)
+  }, [gameId, router, supabase])
+
+  // Écouter les changements en temps réel (Realtime)
+  useEffect(() => {
+    console.log(`[Lobby] Subscribing to game:${gameId}`)
+
     const channel = supabase
-      .channel(`game:${gameId}`)
+      .channel(`game-lobby:${gameId}`, {
+        config: {
+          broadcast: { self: true },
+        },
+      })
       .on(
         'postgres_changes',
         {
@@ -76,7 +106,8 @@ export function GameLobby({
           table: 'game_players',
           filter: `game_id=eq.${gameId}`,
         },
-        async () => {
+        async (payload) => {
+          console.log('[Lobby] Player change detected:', payload)
           // Recharger la liste des joueurs
           const { data } = await supabase
             .from('game_players')
@@ -85,6 +116,7 @@ export function GameLobby({
             .order('player_order')
 
           if (data) {
+            console.log('[Lobby] Updated players:', data)
             setPlayers(data)
             setPlayerCount(data.length)
           }
@@ -99,15 +131,19 @@ export function GameLobby({
           filter: `id=eq.${gameId}`,
         },
         async (payload) => {
+          console.log('[Lobby] Game status changed:', payload)
           // Si la partie a commencé, rediriger
           if (payload.new.status === 'playing') {
             router.push(`/games/${gameId}`)
           }
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('[Lobby] Subscription status:', status)
+      })
 
     return () => {
+      console.log('[Lobby] Unsubscribing from game:', gameId)
       supabase.removeChannel(channel)
     }
   }, [gameId, router, supabase])
