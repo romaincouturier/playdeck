@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { createGuestSession } from '@/lib/guest-session'
+import { createGuestSession, getGuestSession } from '@/lib/guest-session'
 
 export async function createGame(deckId: string, maxPlayers: number) {
   const supabase = await createClient()
@@ -215,12 +215,19 @@ export async function joinGameAsGuest(code: string, guestName: string) {
   // Vérifier que l'invité n'est pas déjà dans la partie
   const { data: existingPlayer } = await supabase
     .from('game_players')
-    .select('id')
+    .select('id, has_left')
     .eq('game_id', game.id)
     .eq('guest_session_id', guestSessionId)
     .single()
 
   if (existingPlayer) {
+    // Si l'invité avait quitté, le marquer comme revenu
+    if (existingPlayer.has_left) {
+      await supabase
+        .from('game_players')
+        .update({ has_left: false })
+        .eq('id', existingPlayer.id)
+    }
     // L'invité est déjà dans la partie, le rediriger vers le lobby
     return game.id
   }
@@ -333,16 +340,18 @@ export async function leaveGame(gameId: string) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
+  const guestSession = await getGuestSession()
+
+  if (!user && !guestSession) {
     throw new Error('Non authentifié')
   }
 
-  // Supprimer le joueur de la partie
+  // Marquer le joueur comme parti au lieu de le supprimer
   const { error } = await supabase
     .from('game_players')
-    .delete()
+    .update({ has_left: true })
     .eq('game_id', gameId)
-    .eq('user_id', user.id)
+    .or(user ? `user_id.eq.${user.id}` : `guest_session_id.eq.${guestSession?.sessionId}`)
 
   if (error) {
     throw new Error('Erreur lors de la sortie de la partie')

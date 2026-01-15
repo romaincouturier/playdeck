@@ -25,6 +25,7 @@ interface Player {
   is_host: boolean
   guest_name: string | null
   guest_session_id: string | null
+  has_left: boolean
 }
 
 export function GameLobby({
@@ -51,13 +52,13 @@ export function GameLobby({
     const loadPlayers = async () => {
       const { data, error } = await supabase
         .from('game_players')
-        .select('user_id, player_order, is_host, guest_name, guest_session_id')
+        .select('user_id, player_order, is_host, guest_name, guest_session_id, has_left')
         .eq('game_id', gameId)
         .order('player_order')
 
       if (data && !error) {
         setPlayers(data)
-        setPlayerCount(data.length)
+        setPlayerCount(data.filter(p => !p.has_left).length)
       }
     }
 
@@ -111,14 +112,14 @@ export function GameLobby({
           // Recharger la liste des joueurs
           const { data } = await supabase
             .from('game_players')
-            .select('user_id, player_order, is_host, guest_name, guest_session_id')
+            .select('user_id, player_order, is_host, guest_name, guest_session_id, has_left')
             .eq('game_id', gameId)
             .order('player_order')
 
           if (data) {
             console.log('[Lobby] Updated players:', data)
             setPlayers(data)
-            setPlayerCount(data.length)
+            setPlayerCount(data.filter(p => !p.has_left).length)
           }
         }
       )
@@ -279,7 +280,9 @@ export function GameLobby({
               <div
                 key={playerId}
                 className={`flex items-center gap-3 p-3 rounded-lg ${
-                  isCurrentPlayer
+                  player.has_left
+                    ? 'bg-muted/30 opacity-50'
+                    : isCurrentPlayer
                     ? 'bg-primary/10 border border-primary/20'
                     : 'bg-muted/50'
                 }`}
@@ -288,12 +291,15 @@ export function GameLobby({
                   {index + 1}
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium">{playerName}</p>
-                  {player.guest_name && !isCurrentPlayer && (
+                  <p className="font-medium">
+                    {playerName}
+                    {player.has_left && <span className="text-xs ml-2 text-destructive">(A quitté)</span>}
+                  </p>
+                  {player.guest_name && !isCurrentPlayer && !player.has_left && (
                     <p className="text-xs text-muted-foreground">Invité</p>
                   )}
                 </div>
-                {player.is_host && (
+                {player.is_host && !player.has_left && (
                   <div className="flex items-center gap-1 text-xs text-amber-600 bg-amber-100 px-2 py-1 rounded">
                     <Crown className="h-3 w-3" />
                     <span>Hôte</span>

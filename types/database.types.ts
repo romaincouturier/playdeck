@@ -106,6 +106,7 @@ export interface Database {
           joined_at: string
           guest_name: string | null
           guest_session_id: string | null
+          has_left: boolean
         }
         Insert: {
           id?: string
@@ -116,6 +117,7 @@ export interface Database {
           joined_at?: string
           guest_name?: string | null
           guest_session_id?: string | null
+          has_left?: boolean
         }
         Update: {
           id?: string
@@ -126,6 +128,7 @@ export interface Database {
           joined_at?: string
           guest_name?: string | null
           guest_session_id?: string | null
+          has_left?: boolean
         }
         Relationships: []
       }
