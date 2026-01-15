@@ -20,7 +20,7 @@ export default async function CreateGamePage() {
       id,
       name,
       description,
-      cards:cards(count)
+      cards:cards(id)
     `)
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
@@ -36,9 +36,7 @@ export default async function CreateGamePage() {
 
   // Filtrer les decks qui ont au moins une carte
   const validDecks = decks?.filter((deck) => {
-    const cardCount = Array.isArray(deck.cards)
-      ? deck.cards.length
-      : (deck.cards as any)?.count || 0
+    const cardCount = Array.isArray(deck.cards) ? deck.cards.length : 0
     return cardCount > 0
   }) || []
 

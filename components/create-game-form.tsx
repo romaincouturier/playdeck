@@ -47,9 +47,7 @@ export function CreateGameForm({ decks }: CreateGameFormProps) {
         <Label>Sélectionnez un deck</Label>
         <div className="grid gap-3">
           {decks.map((deck) => {
-            const cardCount = Array.isArray(deck.cards)
-              ? deck.cards.length
-              : (deck.cards as any)?.count || 0
+            const cardCount = Array.isArray(deck.cards) ? deck.cards.length : 0
 
             return (
               <Card
