@@ -115,7 +115,8 @@ export async function createGame(deckId: string, maxPlayers: number) {
   }
 
   revalidatePath('/games')
-  return game.id
+  revalidatePath(`/games/${game.id}/lobby`)
+  redirect(`/games/${game.id}/lobby`)
 }
 
 export async function joinGame(code: string) {

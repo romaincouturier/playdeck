@@ -31,8 +31,8 @@ export function CreateGameForm({ decks }: CreateGameFormProps) {
     setError(null)
 
     try {
-      const gameId = await createGame(selectedDeckId, maxPlayers)
-      router.push(`/games/${gameId}/lobby`)
+      await createGame(selectedDeckId, maxPlayers)
+      // La redirection est gérée par la Server Action
     } catch (err) {
       console.error(err)
       setError(err instanceof Error ? err.message : 'Erreur lors de la création de la partie')
