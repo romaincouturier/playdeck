@@ -207,12 +207,7 @@ export async function joinGameAsGuest(code: string, guestName: string) {
     throw new Error('Partie introuvable')
   }
 
-  // Vérifier que la partie est en attente
-  if (game.status !== 'waiting') {
-    throw new Error('La partie a déjà commencé')
-  }
-
-  // Vérifier que l'invité n'est pas déjà dans la partie
+  // Vérifier que l'invité n'est pas déjà dans la partie (AVANT de vérifier le statut)
   const { data: existingPlayer } = await supabase
     .from('game_players')
     .select('id, has_left')
@@ -228,8 +223,15 @@ export async function joinGameAsGuest(code: string, guestName: string) {
         .update({ has_left: false })
         .eq('id', existingPlayer.id)
     }
-    // L'invité est déjà dans la partie, le rediriger vers le lobby
+    // L'invité est déjà dans la partie, le rediriger vers la bonne page
+    // Pas d'erreur même si la partie a commencé !
+    revalidatePath(`/games/${game.id}/lobby`)
     return game.id
+  }
+
+  // MAINTENANT on vérifie que la partie est en attente (pour les NOUVEAUX joueurs uniquement)
+  if (game.status !== 'waiting') {
+    throw new Error('La partie a déjà commencé')
   }
 
   // Compter le nombre de joueurs
