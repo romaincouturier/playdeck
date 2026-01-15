@@ -47,8 +47,13 @@ export async function createGame(deckId: string, maxPlayers: number) {
     // Appeler la fonction SQL pour générer le code
     const { data: codeData, error: codeError } = await supabase.rpc('generate_game_code')
 
-    if (codeError || !codeData) {
-      throw new Error('Erreur lors de la génération du code')
+    if (codeError) {
+      console.error('Erreur génération code:', codeError)
+      throw new Error(`Erreur lors de la génération du code: ${codeError.message}`)
+    }
+
+    if (!codeData) {
+      throw new Error('Aucun code généré')
     }
 
     code = codeData
@@ -84,8 +89,13 @@ export async function createGame(deckId: string, maxPlayers: number) {
     .select()
     .single()
 
-  if (gameError || !game) {
-    throw new Error('Erreur lors de la création de la partie')
+  if (gameError) {
+    console.error('Erreur création partie:', gameError)
+    throw new Error(`Erreur lors de la création de la partie: ${gameError.message} (${gameError.code})`)
+  }
+
+  if (!game) {
+    throw new Error('Aucune partie créée')
   }
 
   // Ajouter l'hôte comme premier joueur
@@ -97,9 +107,10 @@ export async function createGame(deckId: string, maxPlayers: number) {
   })
 
   if (playerError) {
+    console.error('Erreur ajout joueur:', playerError)
     // Supprimer la partie si l'ajout du joueur échoue
     await supabase.from('games').delete().eq('id', game.id)
-    throw new Error('Erreur lors de l\'ajout du joueur')
+    throw new Error(`Erreur lors de l'ajout du joueur: ${playerError.message} (${playerError.code})`)
   }
 
   revalidatePath('/games')
