@@ -15,6 +15,7 @@ interface Player {
   is_host: boolean
   guest_name: string | null
   guest_session_id: string | null
+  has_left: boolean
 }
 
 interface HandCard {

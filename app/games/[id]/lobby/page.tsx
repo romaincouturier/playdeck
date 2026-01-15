@@ -53,7 +53,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
   // Récupérer les joueurs
   const { data: players, error: playersError } = await supabase
     .from('game_players')
-    .select('user_id, player_order, is_host, guest_name, guest_session_id')
+    .select('user_id, player_order, is_host, guest_name, guest_session_id, has_left')
     .eq('game_id', id)
     .order('player_order')
 
@@ -71,6 +71,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
 
   const isHost = user ? game.host_id === user.id : false
   const currentPlayerId = user?.id || guestSession?.sessionId || ''
+  const activePlayers = players.filter(p => !p.has_left).length
 
   return (
     <div className="container mx-auto py-8 max-w-2xl">
@@ -79,7 +80,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
         gameCode={game.code}
         deckName={deck?.name || 'Deck'}
         maxPlayers={game.max_players}
-        currentPlayers={players.length}
+        currentPlayers={activePlayers}
         isHost={isHost}
         currentPlayerId={currentPlayerId}
         players={players}
