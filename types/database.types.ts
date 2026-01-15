@@ -136,6 +136,7 @@ export interface Database {
           card_id: string
           location: string
           owner_user_id: string | null
+          owner_guest_session_id: string | null
           position: number
           created_at: string
         }
@@ -145,6 +146,7 @@ export interface Database {
           card_id: string
           location: string
           owner_user_id?: string | null
+          owner_guest_session_id?: string | null
           position: number
           created_at?: string
         }
@@ -154,6 +156,7 @@ export interface Database {
           card_id?: string
           location?: string
           owner_user_id?: string | null
+          owner_guest_session_id?: string | null
           position?: number
           created_at?: string
         }

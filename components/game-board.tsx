@@ -58,8 +58,8 @@ export function GameBoard({
   const router = useRouter()
   const supabase = createClient()
 
-  const isMyTurn = currentTurnPlayerId === userId
-  const isHost = players.find((p) => p.user_id === userId)?.is_host || false
+  const isMyTurn = currentTurnPlayerId === (isGuest ? null : playerId)
+  const isHost = players.find((p) => isGuest ? p.guest_session_id === playerId : p.user_id === playerId)?.is_host || false
 
   // Charger le nombre de cartes par joueur
   useEffect(() => {

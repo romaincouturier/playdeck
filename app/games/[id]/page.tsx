@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { GameBoard } from '@/components/game-board'
+import { getGuestSession } from '@/lib/guest-session'
 
 interface GamePageProps {
   params: Promise<{ id: string }>
@@ -14,9 +15,15 @@ export default async function GamePage({ params }: GamePageProps) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
+  // Check if guest
+  const guestSession = await getGuestSession()
+
+  if (!user && !guestSession) {
     redirect('/login')
   }
+
+  const playerId = user?.id || guestSession?.sessionId || ''
+  const isGuest = !user && !!guestSession
 
   // Récupérer les informations de la partie
   const { data: game, error: gameError } = await supabase
@@ -39,12 +46,12 @@ export default async function GamePage({ params }: GamePageProps) {
     redirect('/decks')
   }
 
-  // Vérifier que l'utilisateur est dans la partie
+  // Vérifier que l'utilisateur/invité est dans la partie
   const { data: player } = await supabase
     .from('game_players')
     .select('user_id, player_order, is_host, guest_name, guest_session_id')
     .eq('game_id', id)
-    .eq('user_id', user.id)
+    .or(user ? `user_id.eq.${user.id}` : `guest_session_id.eq.${guestSession?.sessionId}`)
     .single()
 
   if (!player) {
@@ -65,7 +72,7 @@ export default async function GamePage({ params }: GamePageProps) {
     .eq('id', game.deck_id)
     .single()
 
-  // Récupérer les cartes du joueur
+  // Récupérer les cartes du joueur (user ou guest)
   const { data: hand } = await supabase
     .from('game_cards')
     .select(`
@@ -75,7 +82,7 @@ export default async function GamePage({ params }: GamePageProps) {
     `)
     .eq('game_id', id)
     .eq('location', 'hand')
-    .eq('owner_user_id', user.id)
+    .or(user ? `owner_user_id.eq.${user.id}` : `owner_guest_session_id.eq.${guestSession?.sessionId}`)
     .order('position')
 
   // Compter les cartes dans la pioche
@@ -112,7 +119,8 @@ export default async function GamePage({ params }: GamePageProps) {
         gameId={id}
         deckName={deck?.name || 'Deck'}
         currentTurnPlayerId={game.current_turn_player_id}
-        userId={user.id}
+        playerId={playerId}
+        isGuest={isGuest}
         players={players || []}
         hand={(hand || []).map((card) => ({
           id: card.id,
