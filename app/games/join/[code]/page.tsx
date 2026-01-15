@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { JoinGameWithCode } from '@/components/join-game-with-code'
+import { getGuestSession } from '@/lib/guest-session'
 
 interface JoinGameWithCodePageProps {
   params: Promise<{ code: string }>
@@ -47,8 +48,38 @@ export default async function JoinGameWithCodePage({ params }: JoinGameWithCodeP
     )
   }
 
-  // Si l'utilisateur n'est pas connecté, afficher la page de connexion
+  // Si l'utilisateur n'est pas connecté, vérifier s'il a une session invité
   if (!user) {
+    const guestSession = await getGuestSession()
+
+    // Si c'est un invité, vérifier s'il est déjà dans la partie
+    if (guestSession) {
+      const { data: existingGuestPlayer } = await supabase
+        .from('game_players')
+        .select('id, has_left')
+        .eq('game_id', game.id)
+        .eq('guest_session_id', guestSession.sessionId)
+        .single()
+
+      if (existingGuestPlayer) {
+        // Si l'invité avait quitté, le marquer comme revenu
+        if (existingGuestPlayer.has_left) {
+          await supabase
+            .from('game_players')
+            .update({ has_left: false })
+            .eq('id', existingGuestPlayer.id)
+        }
+
+        // Rediriger vers la page appropriée selon le statut de la partie
+        if (game.status === 'playing') {
+          redirect(`/games/${game.id}`)
+        } else {
+          redirect(`/games/${game.id}/lobby`)
+        }
+      }
+    }
+
+    // Si pas de session invité ou invité pas dans la partie, afficher la page de join
     return <JoinGameWithCode gameCode={game.code} gameStatus={game.status} />
   }
 
