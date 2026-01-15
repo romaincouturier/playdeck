@@ -114,7 +114,7 @@ export default async function GamePage({ params }: GamePageProps) {
     .single()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-st-gray dark:bg-st-anthracite">
       <GameBoard
         gameId={id}
         deckName={deck?.name || 'Deck'}

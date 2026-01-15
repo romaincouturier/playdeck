@@ -91,6 +91,29 @@ export function GameBoard({
     loadPlayerCardCounts()
   }, [gameId, players, supabase])
 
+  // Écouter les changements des joueurs en temps réel (polling)
+  useEffect(() => {
+    const loadPlayers = async () => {
+      const { data, error } = await supabase
+        .from('game_players')
+        .select('user_id, player_order, is_host, guest_name, guest_session_id, has_left')
+        .eq('game_id', gameId)
+        .order('player_order')
+
+      if (data && !error) {
+        setPlayers(data)
+      }
+    }
+
+    // Charger immédiatement
+    loadPlayers()
+
+    // Polling toutes les 3 secondes
+    const interval = setInterval(loadPlayers, 3000)
+
+    return () => clearInterval(interval)
+  }, [gameId, supabase])
+
   // Écouter les changements en temps réel
   useEffect(() => {
     const channel = supabase
@@ -110,6 +133,27 @@ export function GameBoard({
           }
 
           setCurrentTurnPlayerId(payload.new.current_turn_player_id)
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'game_players',
+          filter: `game_id=eq.${gameId}`,
+        },
+        async () => {
+          // Recharger la liste des joueurs
+          const { data: playersData } = await supabase
+            .from('game_players')
+            .select('user_id, player_order, is_host, guest_name, guest_session_id, has_left')
+            .eq('game_id', gameId)
+            .order('player_order')
+
+          if (playersData) {
+            setPlayers(playersData)
+          }
         }
       )
       .on(
@@ -271,16 +315,16 @@ export function GameBoard({
   return (
     <div className="min-h-screen flex flex-col">
       {/* En-tête */}
-      <header className="border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+      <header className="border-b border-st-anthracite/10 bg-white dark:bg-st-anthracite">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold">{deckName}</h1>
-              <p className="text-sm text-muted-foreground">
+              <h1 className="text-xl font-bold text-st-anthracite dark:text-white">{deckName}</h1>
+              <p className="text-sm">
                 {isMyTurn ? (
-                  <span className="text-green-600 font-semibold">C&apos;est votre tour !</span>
+                  <span className="text-st-yellow font-semibold">C&apos;est votre tour !</span>
                 ) : (
-                  <span>En attente du joueur {players.findIndex((p) => p.user_id === currentTurnPlayerId) + 1}...</span>
+                  <span className="text-muted-foreground">En attente du joueur {players.findIndex((p) => p.user_id === currentTurnPlayerId) + 1}...</span>
                 )}
               </p>
             </div>
@@ -319,12 +363,14 @@ export function GameBoard({
                 return (
                   <div
                     key={playerUniqueId}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
                       isCurrentUser
                         ? 'bg-primary/10 border border-primary/20'
                         : 'bg-muted'
                     } ${
-                      currentTurnPlayerId === player.user_id ? 'ring-2 ring-green-500' : ''
+                      currentTurnPlayerId === player.user_id ? 'ring-2 ring-st-yellow' : ''
+                    } ${
+                      player.has_left ? 'opacity-50' : ''
                     }`}
                   >
                     <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold">
@@ -333,14 +379,15 @@ export function GameBoard({
                     <div>
                       <p className="text-sm font-medium">
                         {playerName}
-                        {player.is_host && <Crown className="inline h-3 w-3 ml-1 text-amber-600" />}
+                        {player.is_host && <Crown className="inline h-3 w-3 ml-1 text-st-yellow" />}
+                        {player.has_left && <span className="text-xs ml-2 text-destructive">(A quitté)</span>}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {cardCount} carte(s)
                       </p>
                     </div>
                     {currentTurnPlayerId === player.user_id && (
-                      <ArrowRight className="h-4 w-4 text-green-500" />
+                      <ArrowRight className="h-4 w-4 text-st-yellow" />
                     )}
                   </div>
                 )
@@ -355,10 +402,10 @@ export function GameBoard({
               <h3 className="text-center font-semibold">Pioche</h3>
               <div className="aspect-[2/3] relative">
                 {deckCount > 0 ? (
-                  <Card className="absolute inset-0 bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white">
+                  <Card className="absolute inset-0 bg-gradient-to-br from-st-yellow to-st-anthracite flex items-center justify-center border-2 border-st-yellow">
                     <div className="text-center">
-                      <p className="text-4xl font-bold">{deckCount}</p>
-                      <p className="text-sm">carte(s)</p>
+                      <p className="text-4xl font-bold text-st-anthracite">{deckCount}</p>
+                      <p className="text-sm text-st-anthracite">carte(s)</p>
                     </div>
                   </Card>
                 ) : (
