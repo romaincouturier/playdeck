@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { joinGameAsGuest } from '@/app/games/actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,41 +15,26 @@ interface JoinGameWithCodeProps {
 }
 
 export function JoinGameWithCode({ gameCode, gameStatus }: JoinGameWithCodeProps) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [isSignUp, setIsSignUp] = useState(false)
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
-  const supabase = createClient()
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
     try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-        })
+      const fullName = `${firstName} ${lastName}`.trim()
 
-        if (error) throw error
-
-        // Après inscription, recharger la page pour rejoindre automatiquement
-        router.refresh()
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-
-        if (error) throw error
-
-        // Après connexion, recharger la page pour rejoindre automatiquement
-        router.refresh()
+      if (fullName.length < 2) {
+        throw new Error('Veuillez entrer votre nom complet')
       }
+
+      const gameId = await joinGameAsGuest(gameCode, fullName)
+      router.push(`/games/${gameId}/lobby`)
     } catch (err: any) {
       console.error(err)
       setError(err.message || 'Une erreur est survenue')
@@ -88,33 +73,40 @@ export function JoinGameWithCode({ gameCode, gameStatus }: JoinGameWithCodeProps
           </div>
         </div>
 
-        {/* Formulaire de connexion/inscription */}
+        {/* Formulaire invité */}
         <Card className="p-6">
-          <form onSubmit={handleAuth} className="space-y-4">
+          <form onSubmit={handleJoin} className="space-y-4">
+            <div className="text-center mb-4">
+              <p className="text-sm text-muted-foreground">
+                Entrez votre nom pour rejoindre la partie en tant qu&apos;invité
+              </p>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="firstName">Prénom</Label>
               <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="votre@email.com"
+                id="firstName"
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Jean"
                 required
                 disabled={loading}
+                minLength={2}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Mot de passe</Label>
+              <Label htmlFor="lastName">Nom</Label>
               <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                id="lastName"
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Dupont"
                 required
                 disabled={loading}
-                minLength={6}
+                minLength={2}
               />
             </div>
 
@@ -125,33 +117,15 @@ export function JoinGameWithCode({ gameCode, gameStatus }: JoinGameWithCodeProps
             )}
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? (
-                isSignUp ? 'Inscription...' : 'Connexion...'
-              ) : (
-                isSignUp ? 'S\'inscrire et rejoindre' : 'Se connecter et rejoindre'
-              )}
+              {loading ? 'Connexion...' : 'Rejoindre la partie'}
             </Button>
-
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp)
-                  setError(null)
-                }}
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                disabled={loading}
-              >
-                {isSignUp ? 'Déjà un compte ? Se connecter' : 'Pas de compte ? S\'inscrire'}
-              </button>
-            </div>
           </form>
         </Card>
 
         {/* Info */}
         <div className="text-center text-sm text-muted-foreground">
           <p>
-            Vous allez rejoindre automatiquement la partie après connexion
+            Vous rejoignez en tant qu&apos;invité. Aucun compte n&apos;est nécessaire.
           </p>
         </div>
       </div>

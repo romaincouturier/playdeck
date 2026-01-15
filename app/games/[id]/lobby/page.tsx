@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { GameLobby } from '@/components/game-lobby'
+import { getGuestSession } from '@/lib/guest-session'
 
 interface LobbyPageProps {
   params: Promise<{ id: string }>
@@ -14,7 +15,10 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
+  // Vérifier si c'est un invité
+  const guestSession = await getGuestSession()
+
+  if (!user && !guestSession) {
     redirect('/login')
   }
 
@@ -49,7 +53,7 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
   // Récupérer les joueurs
   const { data: players, error: playersError } = await supabase
     .from('game_players')
-    .select('user_id, player_order, is_host')
+    .select('user_id, player_order, is_host, guest_name, guest_session_id')
     .eq('game_id', id)
     .order('player_order')
 
@@ -57,13 +61,16 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
     redirect('/decks')
   }
 
-  // Vérifier que l'utilisateur actuel est dans la partie
-  const isInGame = players.some((p) => p.user_id === user.id)
+  // Vérifier que l'utilisateur/invité actuel est dans la partie
+  const isInGame = players.some(
+    (p) => p.user_id === user?.id || p.guest_session_id === guestSession?.sessionId
+  )
   if (!isInGame) {
     redirect('/decks')
   }
 
-  const isHost = game.host_id === user.id
+  const isHost = user ? game.host_id === user.id : false
+  const currentPlayerId = user?.id || guestSession?.sessionId || ''
 
   return (
     <div className="container mx-auto py-8 max-w-2xl">
@@ -74,7 +81,8 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
         maxPlayers={game.max_players}
         currentPlayers={players.length}
         isHost={isHost}
-        userId={user.id}
+        currentPlayerId={currentPlayerId}
+        players={players}
       />
     </div>
   )

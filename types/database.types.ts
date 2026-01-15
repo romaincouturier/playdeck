@@ -100,26 +100,32 @@ export interface Database {
         Row: {
           id: string
           game_id: string
-          user_id: string
+          user_id: string | null
           player_order: number
           is_host: boolean
           joined_at: string
+          guest_name: string | null
+          guest_session_id: string | null
         }
         Insert: {
           id?: string
           game_id: string
-          user_id: string
+          user_id?: string | null
           player_order: number
           is_host?: boolean
           joined_at?: string
+          guest_name?: string | null
+          guest_session_id?: string | null
         }
         Update: {
           id?: string
           game_id?: string
-          user_id?: string
+          user_id?: string | null
           player_order?: number
           is_host?: boolean
           joined_at?: string
+          guest_name?: string | null
+          guest_session_id?: string | null
         }
         Relationships: []
       }

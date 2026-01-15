@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createGuestSession } from '@/lib/guest-session'
 
 export async function createGame(deckId: string, maxPlayers: number) {
   const supabase = await createClient()
@@ -183,6 +184,75 @@ export async function joinGame(code: string) {
 
   if (joinError) {
     throw new Error('Erreur lors de la connexion à la partie')
+  }
+
+  revalidatePath(`/games/${game.id}/lobby`)
+  return game.id
+}
+
+export async function joinGameAsGuest(code: string, guestName: string) {
+  const supabase = await createClient()
+
+  // Créer une session invité
+  const guestSessionId = await createGuestSession(guestName)
+
+  // Trouver la partie avec le code
+  const { data: game, error: gameError } = await supabase
+    .from('games')
+    .select('id, status, max_players')
+    .eq('code', code.toUpperCase())
+    .single()
+
+  if (gameError || !game) {
+    throw new Error('Partie introuvable')
+  }
+
+  // Vérifier que la partie est en attente
+  if (game.status !== 'waiting') {
+    throw new Error('La partie a déjà commencé')
+  }
+
+  // Vérifier que l'invité n'est pas déjà dans la partie
+  const { data: existingPlayer } = await supabase
+    .from('game_players')
+    .select('id')
+    .eq('game_id', game.id)
+    .eq('guest_session_id', guestSessionId)
+    .single()
+
+  if (existingPlayer) {
+    // L'invité est déjà dans la partie, le rediriger vers le lobby
+    return game.id
+  }
+
+  // Compter le nombre de joueurs
+  const { data: players, error: playersError } = await supabase
+    .from('game_players')
+    .select('id')
+    .eq('game_id', game.id)
+
+  if (playersError) {
+    throw new Error('Erreur lors de la vérification des joueurs')
+  }
+
+  if (players && players.length >= game.max_players) {
+    throw new Error('La partie est complète')
+  }
+
+  // Ajouter l'invité
+  const playerOrder = players ? players.length : 0
+  const { error: joinError } = await supabase.from('game_players').insert({
+    game_id: game.id,
+    user_id: null,
+    guest_session_id: guestSessionId,
+    guest_name: guestName,
+    player_order: playerOrder,
+    is_host: false,
+  })
+
+  if (joinError) {
+    console.error('Erreur ajout invité:', joinError)
+    throw new Error(`Erreur lors de la connexion à la partie: ${joinError.message}`)
   }
 
   revalidatePath(`/games/${game.id}/lobby`)
