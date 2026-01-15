@@ -27,7 +27,8 @@ interface GameBoardProps {
   gameId: string
   deckName: string
   currentTurnPlayerId: string | null
-  userId: string
+  playerId: string
+  isGuest: boolean
   players: Player[]
   hand: HandCard[]
   deckCount: number
@@ -39,7 +40,8 @@ export function GameBoard({
   gameId,
   deckName,
   currentTurnPlayerId: initialTurnPlayerId,
-  userId,
+  playerId,
+  isGuest,
   players: initialPlayers,
   hand: initialHand,
   deckCount: initialDeckCount,
@@ -67,17 +69,19 @@ export function GameBoard({
       const counts: Record<string, number> = {}
 
       for (const player of players) {
-        // Skip guests - they don't have cards
-        if (!player.user_id) continue
+        const playerUniqueId = player.user_id || player.guest_session_id
+        if (!playerUniqueId) continue
 
         const { count } = await supabase
           .from('game_cards')
           .select('*', { count: 'exact', head: true })
           .eq('game_id', gameId)
           .eq('location', 'hand')
-          .eq('owner_user_id', player.user_id)
+          .or(player.user_id
+            ? `owner_user_id.eq.${player.user_id}`
+            : `owner_guest_session_id.eq.${player.guest_session_id}`)
 
-        counts[player.user_id] = count || 0
+        counts[playerUniqueId] = count || 0
       }
 
       setPlayerCardCounts(counts)
@@ -181,17 +185,19 @@ export function GameBoard({
           // Recharger les comptes de cartes des joueurs
           const counts: Record<string, number> = {}
           for (const player of players) {
-            // Skip guests - they don't have cards
-            if (!player.user_id) continue
+            const playerUniqueId = player.user_id || player.guest_session_id
+            if (!playerUniqueId) continue
 
             const { count } = await supabase
               .from('game_cards')
               .select('*', { count: 'exact', head: true })
               .eq('game_id', gameId)
               .eq('location', 'hand')
-              .eq('owner_user_id', player.user_id)
+              .or(player.user_id
+                ? `owner_user_id.eq.${player.user_id}`
+                : `owner_guest_session_id.eq.${player.guest_session_id}`)
 
-            counts[player.user_id] = count || 0
+            counts[playerUniqueId] = count || 0
           }
           setPlayerCardCounts(counts)
         }
@@ -300,14 +306,16 @@ export function GameBoard({
             </div>
             <div className="flex flex-wrap gap-2">
               {players.map((player, index) => {
-                const playerId = player.user_id || player.guest_session_id || ''
-                const isCurrentUser = player.user_id === userId
+                const playerUniqueId = player.user_id || player.guest_session_id || ''
+                const isCurrentUser = isGuest
+                  ? player.guest_session_id === playerId
+                  : player.user_id === playerId
                 const playerName = player.guest_name || (isCurrentUser ? 'Vous' : `Joueur ${index + 1}`)
-                const cardCount = player.user_id ? (playerCardCounts[player.user_id] || 0) : 0
+                const cardCount = playerCardCounts[playerUniqueId] || 0
 
                 return (
                   <div
-                    key={playerId}
+                    key={playerUniqueId}
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
                       isCurrentUser
                         ? 'bg-primary/10 border border-primary/20'
