@@ -42,7 +42,7 @@ export default async function GamePage({ params }: GamePageProps) {
   // Vérifier que l'utilisateur est dans la partie
   const { data: player } = await supabase
     .from('game_players')
-    .select('user_id, player_order, is_host')
+    .select('user_id, player_order, is_host, guest_name, guest_session_id')
     .eq('game_id', id)
     .eq('user_id', user.id)
     .single()
@@ -54,7 +54,7 @@ export default async function GamePage({ params }: GamePageProps) {
   // Récupérer tous les joueurs
   const { data: players } = await supabase
     .from('game_players')
-    .select('user_id, player_order, is_host')
+    .select('user_id, player_order, is_host, guest_name, guest_session_id')
     .eq('game_id', id)
     .order('player_order')
 

@@ -10,9 +10,11 @@ import { CardImage } from '@/components/card-image'
 import { Crown, ArrowRight, Users } from 'lucide-react'
 
 interface Player {
-  user_id: string
+  user_id: string | null
   player_order: number
   is_host: boolean
+  guest_name: string | null
+  guest_session_id: string | null
 }
 
 interface HandCard {
