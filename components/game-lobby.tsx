@@ -38,6 +38,7 @@ export function GameLobby({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -149,6 +150,17 @@ export function GameLobby({
     }
   }
 
+  const handleCopyLink = async () => {
+    try {
+      const url = `${window.location.origin}/games/join/${gameCode}`
+      await navigator.clipboard.writeText(url)
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy link:', err)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* En-tête */}
@@ -178,6 +190,31 @@ export function GameLobby({
         <p className="text-xs text-muted-foreground mt-2">
           Partagez ce code avec les autres joueurs
         </p>
+
+        {/* Bouton pour copier le lien complet */}
+        <div className="mt-4 pt-4 border-t">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopyLink}
+            className="w-full"
+          >
+            {linkCopied ? (
+              <>
+                <Check className="mr-2 h-4 w-4 text-green-500" />
+                Lien copié !
+              </>
+            ) : (
+              <>
+                <Copy className="mr-2 h-4 w-4" />
+                Copier le lien d&apos;invitation
+              </>
+            )}
+          </Button>
+          <p className="text-xs text-muted-foreground mt-2">
+            Les joueurs sans compte pourront se connecter et rejoindre directement
+          </p>
+        </div>
       </Card>
 
       {/* Liste des joueurs */}
