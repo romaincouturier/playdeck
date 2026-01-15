@@ -15,13 +15,16 @@ interface GameLobbyProps {
   maxPlayers: number
   currentPlayers: number
   isHost: boolean
-  userId: string
+  currentPlayerId: string
+  players: Player[]
 }
 
 interface Player {
-  user_id: string
+  user_id: string | null
   player_order: number
   is_host: boolean
+  guest_name: string | null
+  guest_session_id: string | null
 }
 
 export function GameLobby({
@@ -31,9 +34,10 @@ export function GameLobby({
   maxPlayers,
   currentPlayers: initialPlayers,
   isHost,
-  userId,
+  currentPlayerId,
+  players: initialPlayersList,
 }: GameLobbyProps) {
-  const [players, setPlayers] = useState<Player[]>([])
+  const [players, setPlayers] = useState<Player[]>(initialPlayersList)
   const [playerCount, setPlayerCount] = useState(initialPlayers)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -47,7 +51,7 @@ export function GameLobby({
     const loadPlayers = async () => {
       const { data, error } = await supabase
         .from('game_players')
-        .select('user_id, player_order, is_host')
+        .select('user_id, player_order, is_host, guest_name, guest_session_id')
         .eq('game_id', gameId)
         .order('player_order')
 
@@ -76,7 +80,7 @@ export function GameLobby({
           // Recharger la liste des joueurs
           const { data } = await supabase
             .from('game_players')
-            .select('user_id, player_order, is_host')
+            .select('user_id, player_order, is_host, guest_name, guest_session_id')
             .eq('game_id', gameId)
             .order('player_order')
 
@@ -230,31 +234,38 @@ export function GameLobby({
         </div>
 
         <div className="space-y-2">
-          {players.map((player, index) => (
-            <div
-              key={player.user_id}
-              className={`flex items-center gap-3 p-3 rounded-lg ${
-                player.user_id === userId
-                  ? 'bg-primary/10 border border-primary/20'
-                  : 'bg-muted/50'
-              }`}
-            >
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-semibold">
-                {index + 1}
-              </div>
-              <div className="flex-1">
-                <p className="font-medium">
-                  {player.user_id === userId ? 'Vous' : `Joueur ${index + 1}`}
-                </p>
-              </div>
-              {player.is_host && (
-                <div className="flex items-center gap-1 text-xs text-amber-600 bg-amber-100 px-2 py-1 rounded">
-                  <Crown className="h-3 w-3" />
-                  <span>Hôte</span>
+          {players.map((player, index) => {
+            const playerId = player.user_id || player.guest_session_id || ''
+            const isCurrentPlayer = playerId === currentPlayerId
+            const playerName = player.guest_name || (isCurrentPlayer ? 'Vous' : `Joueur ${index + 1}`)
+
+            return (
+              <div
+                key={playerId}
+                className={`flex items-center gap-3 p-3 rounded-lg ${
+                  isCurrentPlayer
+                    ? 'bg-primary/10 border border-primary/20'
+                    : 'bg-muted/50'
+                }`}
+              >
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-semibold">
+                  {index + 1}
                 </div>
-              )}
-            </div>
-          ))}
+                <div className="flex-1">
+                  <p className="font-medium">{playerName}</p>
+                  {player.guest_name && !isCurrentPlayer && (
+                    <p className="text-xs text-muted-foreground">Invité</p>
+                  )}
+                </div>
+                {player.is_host && (
+                  <div className="flex items-center gap-1 text-xs text-amber-600 bg-amber-100 px-2 py-1 rounded">
+                    <Crown className="h-3 w-3" />
+                    <span>Hôte</span>
+                  </div>
+                )}
+              </div>
+            )
+          })}
 
           {/* Slots vides */}
           {Array.from({ length: maxPlayers - playerCount }).map((_, i) => (
