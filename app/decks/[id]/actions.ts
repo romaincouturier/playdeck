@@ -130,6 +130,81 @@ export async function uploadCard(deckId: string, file: File) {
   revalidatePath(`/decks/${deckId}`)
 }
 
+export async function updateCard(cardId: string, deckId: string, file: File) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  // Check deck ownership
+  const { data: deck } = await supabase
+    .from('decks')
+    .select('id')
+    .eq('id', deckId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (!deck) {
+    throw new Error('Deck non trouvé')
+  }
+
+  // Get old card info
+  const { data: card } = await supabase
+    .from('cards')
+    .select('image_url, deck_id')
+    .eq('id', cardId)
+    .single()
+
+  if (!card) {
+    throw new Error('Carte non trouvée')
+  }
+
+  // Verify card belongs to this deck
+  if (card.deck_id !== deckId) {
+    throw new Error('Cette carte n\'appartient pas à ce deck')
+  }
+
+  // Upload new image to storage
+  const fileExt = file.name.split('.').pop()
+  const fileName = `${user.id}/${deckId}/${Date.now()}.${fileExt}`
+
+  const { error: uploadError } = await supabase.storage
+    .from('card-images')
+    .upload(fileName, file)
+
+  if (uploadError) {
+    throw new Error("Erreur lors de l'upload de l'image")
+  }
+
+  // Get public URL
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from('card-images').getPublicUrl(fileName)
+
+  // Update card record
+  const { error: updateError } = await supabase
+    .from('cards')
+    .update({ image_url: publicUrl })
+    .eq('id', cardId)
+
+  if (updateError) {
+    // Clean up uploaded file if database update fails
+    await supabase.storage.from('card-images').remove([fileName])
+    throw new Error('Erreur lors de la mise à jour de la carte')
+  }
+
+  // Delete old image from storage
+  const oldPath = card.image_url.split('/').slice(-3).join('/')
+  await supabase.storage.from('card-images').remove([oldPath])
+
+  revalidatePath(`/decks/${deckId}`)
+}
+
 export async function deleteCard(cardId: string, deckId: string) {
   const supabase = await createClient()
 

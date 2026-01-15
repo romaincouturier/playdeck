@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { deleteCard } from '@/app/decks/[id]/actions'
 import { Button } from '@/components/ui/button'
 import { CardImage } from '@/components/card-image'
+import { CardEditDialog } from '@/components/card-edit-dialog'
 import { Trash2 } from 'lucide-react'
 
 interface Card {
@@ -51,7 +52,8 @@ export function CardGrid({ cards, deckId }: CardGridProps) {
             alt={`Carte ${card.position + 1}`}
             position={card.position}
           />
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center gap-2">
+            <CardEditDialog card={card} />
             <Button
               variant="destructive"
               size="icon"
