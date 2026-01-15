@@ -130,7 +130,9 @@ export function GameBoard({
             `)
             .eq('game_id', gameId)
             .eq('location', 'hand')
-            .eq('owner_user_id', userId)
+            .or(isGuest
+              ? `owner_guest_session_id.eq.${playerId}`
+              : `owner_user_id.eq.${playerId}`)
             .order('position')
 
           if (handData) {
@@ -207,7 +209,7 @@ export function GameBoard({
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [gameId, userId, router, supabase, players])
+  }, [gameId, playerId, isGuest, router, supabase, players])
 
   const handleDrawCard = async () => {
     setLoading(true)
