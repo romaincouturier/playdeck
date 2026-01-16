@@ -11,9 +11,9 @@ export default async function JoinGamePage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect('/login')
-  }
+  // On n'oblige plus la connexion ici car on peut rejoindre en tant qu'invité
+  // La redirection se fera via le formulaire vers /games/join/[code]
+  // qui gère l'état connecté/invité
 
   return (
     <div className="min-h-screen flex flex-col bg-st-gray dark:bg-st-anthracite">

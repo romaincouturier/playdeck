@@ -25,8 +25,7 @@ export function JoinGameForm() {
     setError(null)
 
     try {
-      const gameId = await joinGame(code)
-      router.push(`/games/${gameId}/lobby`)
+      router.push(`/games/join/${code.toUpperCase()}`)
     } catch (err) {
       console.error(err)
       setError(err instanceof Error ? err.message : 'Erreur lors de la connexion à la partie')
