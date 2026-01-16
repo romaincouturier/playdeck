@@ -68,23 +68,22 @@ BEGIN
 
     -- 3. Create Cards (one of each for testing, in a real scenario we'd create batches per player)
     -- Actually, Planning Poker decks should have one set of these per max_player.
-    -- For simplicity in seed, let's just create one set. The join game logic should probably ensure players get their sets.
-    -- Actually, in Playdeck, cards are fixed in the deck. 
-    -- For Planning Poker, we need enough cards for all players. Let's create 10 copies of each (max 10 players).
-    FOR i IN 1..10 LOOP
-        INSERT INTO public.cards (deck_id, type_id, name, value) VALUES (new_deck_id, type_0_id, '0', 0);
-        INSERT INTO public.cards (deck_id, type_id, name, value) VALUES (new_deck_id, type_1_id, '1', 1);
-        INSERT INTO public.cards (deck_id, type_id, name, value) VALUES (new_deck_id, type_2_id, '2', 2);
-        INSERT INTO public.cards (deck_id, type_id, name, value) VALUES (new_deck_id, type_3_id, '3', 3);
-        INSERT INTO public.cards (deck_id, type_id, name, value) VALUES (new_deck_id, type_5_id, '5', 5);
-        INSERT INTO public.cards (deck_id, type_id, name, value) VALUES (new_deck_id, type_8_id, '8', 8);
-        INSERT INTO public.cards (deck_id, type_id, name, value) VALUES (new_deck_id, type_13_id, '13', 13);
-        INSERT INTO public.cards (deck_id, type_id, name, value) VALUES (new_deck_id, type_20_id, '20', 20);
-        INSERT INTO public.cards (deck_id, type_id, name, value) VALUES (new_deck_id, type_40_id, '40', 40);
-        INSERT INTO public.cards (deck_id, type_id, name, value) VALUES (new_deck_id, type_100_id, '100', 100);
-        INSERT INTO public.cards (deck_id, type_id, name, value) VALUES (new_deck_id, type_ques_id, '?', NULL);
-        INSERT INTO public.cards (deck_id, type_id, name, value) VALUES (new_deck_id, type_coffee_id, 'Coffee', NULL);
-    END LOOP;
+    -- For simplicity in seed, let's just create one set of 12 cards.
+    -- In a real game, the app would handle distributing these or we create more.
+    -- For now let's create 12 cards (one of each type) with a dummy image and positions.
+    INSERT INTO public.cards (deck_id, type_id, image_url, position) VALUES 
+        (new_deck_id, type_0_id, 'https://placehold.co/400x600?text=0', 0),
+        (new_deck_id, type_1_id, 'https://placehold.co/400x600?text=1', 1),
+        (new_deck_id, type_2_id, 'https://placehold.co/400x600?text=2', 2),
+        (new_deck_id, type_3_id, 'https://placehold.co/400x600?text=3', 3),
+        (new_deck_id, type_5_id, 'https://placehold.co/400x600?text=5', 4),
+        (new_deck_id, type_8_id, 'https://placehold.co/400x600?text=8', 5),
+        (new_deck_id, type_13_id, 'https://placehold.co/400x600?text=13', 6),
+        (new_deck_id, type_20_id, 'https://placehold.co/400x600?text=20', 7),
+        (new_deck_id, type_40_id, 'https://placehold.co/400x600?text=40', 8),
+        (new_deck_id, type_100_id, 'https://placehold.co/400x600?text=100', 9),
+        (new_deck_id, type_ques_id, 'https://placehold.co/400x600?text=?', 10),
+        (new_deck_id, type_coffee_id, 'https://placehold.co/400x600?text=Coffee', 11);
 
     -- 4. Create Zones
     -- Player Hand
