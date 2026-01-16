@@ -36,6 +36,14 @@ export function CreateGameForm({ decks }: CreateGameFormProps) {
       console.log('[CreateGameForm] Création terminée, redirection en cours')
       // La redirection est gérée par la Server Action
     } catch (err) {
+      // Next.js utilise une erreur spéciale pour les redirections
+      // On ne doit pas la traiter comme une vraie erreur
+      if (err instanceof Error && err.message === 'NEXT_REDIRECT') {
+        console.log('[CreateGameForm] Redirection en cours...')
+        // Ne pas définir d'erreur, laisser la redirection se faire
+        return
+      }
+
       console.error('[CreateGameForm] Erreur capturée:', err)
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la création de la partie'
       console.error('[CreateGameForm] Message erreur:', errorMessage)
@@ -56,11 +64,10 @@ export function CreateGameForm({ decks }: CreateGameFormProps) {
             return (
               <Card
                 key={deck.id}
-                className={`p-4 cursor-pointer transition-colors ${
-                  selectedDeckId === deck.id
+                className={`p-4 cursor-pointer transition-colors ${selectedDeckId === deck.id
                     ? 'border-primary bg-primary/5'
                     : 'hover:border-primary/50'
-                }`}
+                  }`}
                 onClick={() => setSelectedDeckId(deck.id)}
               >
                 <div className="flex items-start justify-between">
@@ -76,11 +83,10 @@ export function CreateGameForm({ decks }: CreateGameFormProps) {
                     </p>
                   </div>
                   <div
-                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      selectedDeckId === deck.id
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedDeckId === deck.id
                         ? 'border-primary bg-primary'
                         : 'border-muted-foreground'
-                    }`}
+                      }`}
                   >
                     {selectedDeckId === deck.id && (
                       <div className="w-2 h-2 rounded-full bg-white" />
