@@ -48,32 +48,30 @@ ALTER TABLE public.games ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.game_players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.game_cards ENABLE ROW LEVEL SECURITY;
 
--- 5. NOUVELLES POLITIQUES POUR 'GAMES'
-CREATE POLICY "games_select_policy" ON public.games FOR SELECT
+-- 5. POLITIQUES 'GAMES' (On permet de VOIR les parties en attente ou en cours)
+CREATE POLICY "games_select_public" ON public.games FOR SELECT 
+USING (status IN ('waiting', 'playing'));
+
+CREATE POLICY "games_select_participant" ON public.games FOR SELECT 
 USING (auth.uid() = host_id OR public.is_game_participant(id, auth.uid()));
 
-CREATE POLICY "games_insert_policy" ON public.games FOR INSERT
-WITH CHECK (auth.uid() = host_id);
+CREATE POLICY "games_insert_policy" ON public.games FOR INSERT WITH CHECK (auth.uid() = host_id);
+CREATE POLICY "games_update_policy" ON public.games FOR UPDATE USING (auth.uid() = host_id);
 
-CREATE POLICY "games_update_policy" ON public.games FOR UPDATE
-USING (auth.uid() = host_id);
+-- 6. POLITIQUES 'GAME_PLAYERS'
+CREATE POLICY "players_select_public" ON public.game_players FOR SELECT 
+USING (EXISTS (SELECT 1 FROM public.games WHERE id = game_players.game_id AND status IN ('waiting', 'playing')));
 
--- 6. NOUVELLES POLITIQUES POUR 'GAME_PLAYERS'
-CREATE POLICY "players_select_own" ON public.game_players FOR SELECT
-USING (auth.uid() = user_id);
+CREATE POLICY "players_select_own" ON public.game_players FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "players_select_team" ON public.game_players FOR SELECT USING (public.is_game_participant(game_id, auth.uid()));
+CREATE POLICY "players_insert_policy" ON public.game_players FOR INSERT WITH CHECK (true);
 
-CREATE POLICY "players_select_team" ON public.game_players FOR SELECT
-USING (public.is_game_participant(game_id, auth.uid()));
+-- 7. POLITIQUES 'GAME_CARDS'
+CREATE POLICY "cards_select_public" ON public.game_cards FOR SELECT 
+USING (EXISTS (SELECT 1 FROM public.games WHERE id = game_cards.game_id AND status IN ('waiting', 'playing')));
 
-CREATE POLICY "players_insert_policy" ON public.game_players FOR INSERT
-WITH CHECK (auth.uid() = user_id);
-
--- 7. NOUVELLES POLITIQUES POUR 'GAME_CARDS'
-CREATE POLICY "cards_select_policy" ON public.game_cards FOR SELECT
-USING (public.is_game_participant(game_id, auth.uid()));
-
-CREATE POLICY "cards_all_policy" ON public.game_cards FOR ALL
-USING (public.is_game_participant(game_id, auth.uid()));
+CREATE POLICY "cards_select_participant" ON public.game_cards FOR SELECT USING (public.is_game_participant(game_id, auth.uid()));
+CREATE POLICY "cards_all_policy" ON public.game_cards FOR ALL USING (public.is_game_participant(game_id, auth.uid()));
 
 -- 8. DROITS
 GRANT EXECUTE ON FUNCTION public.is_game_participant TO authenticated;
