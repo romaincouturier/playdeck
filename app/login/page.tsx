@@ -68,8 +68,8 @@ export default function LoginPage() {
           <p className="text-muted-foreground font-medium">L&apos;aventure commence ici.</p>
         </div>
 
-        <div className="w-full max-w-4xl grid md:grid-cols-2 gap-8 items-start">
-          <Card className="w-full shadow-lg border-st-anthracite/5">
+        <div className="w-full max-w-5xl grid md:grid-cols-[1fr_auto_1fr] gap-4 md:gap-8 items-center">
+          <Card className="w-full shadow-lg border-st-anthracite/5 self-start">
             <CardHeader>
               <CardTitle className="text-2xl">
                 {isSignUp ? 'Créer un compte' : 'Espace Membre'}
@@ -131,12 +131,12 @@ export default function LoginPage() {
             </CardContent>
           </Card>
 
-          <div className="hidden md:flex flex-col items-center justify-center h-full">
-            <div className="w-px h-full bg-st-anthracite/10 relative">
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-st-gray dark:bg-st-anthracite p-3 rounded-full border border-st-anthracite/10 text-xs font-bold uppercase text-muted-foreground">
-                Ou
-              </div>
+          <div className="flex md:flex-col items-center justify-center my-4 md:my-0 md:h-full">
+            <div className="h-px w-8 md:w-px md:h-32 bg-st-anthracite/10"></div>
+            <div className="bg-st-gray dark:bg-st-anthracite p-3 rounded-full border border-st-anthracite/10 text-xs font-bold uppercase text-muted-foreground mx-4 md:mx-0 md:my-4">
+              Ou
             </div>
+            <div className="h-px w-8 md:w-px md:h-32 bg-st-anthracite/10"></div>
           </div>
 
           <Card className="w-full shadow-xl border-st-yellow/40 bg-st-yellow/5">
