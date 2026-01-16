@@ -5,7 +5,8 @@
 -- 1. Nettoyage des anciennes politiques problématiques
 DROP POLICY IF EXISTS "Players can view players in their games" ON public.game_players;
 DROP POLICY IF EXISTS "Players can view others in same game" ON public.game_players;
-DROP POLICY IF EXISTS "Players can view their own record" ON public.game_players;
+DROP POLICY IF EXISTS "Users can view their own player record" ON public.game_players;
+DROP POLICY IF EXISTS "Users can view their games" ON public.games;
 
 -- 2. Création d'une fonction SECURITY DEFINER robuste
 -- Le "SET search_path = public" est CRUCIAL pour éviter la récursion
@@ -24,12 +25,20 @@ AS $$
   );
 $$;
 
--- 3. Politique ultra-simple pour permettre à chacun de voir son propre enregistrement (base)
+-- 3. Politique pour la table GAMES
+CREATE POLICY "Users can view their games"
+  ON public.games FOR SELECT
+  USING (
+    auth.uid() = host_id OR
+    public.check_user_in_game(id, auth.uid())
+  );
+
+-- 4. Politique ultra-simple pour permettre à chacun de voir son propre enregistrement (base)
 CREATE POLICY "Users can view their own player record"
   ON public.game_players FOR SELECT
   USING (auth.uid() = user_id);
 
--- 4. Politique pour voir les AUTRES joueurs de la même partie
+-- 5. Politique pour voir les AUTRES joueurs de la même partie
 -- On utilise la fonction qui bypass le RLS pour casser la récursion
 CREATE POLICY "Players can view teammates"
   ON public.game_players FOR SELECT
@@ -37,7 +46,7 @@ CREATE POLICY "Players can view teammates"
     public.check_user_in_game(game_id, auth.uid())
   );
 
--- 5. Attribution des droits d'exécution sur la fonction
+-- 6. Attribution des droits d'exécution sur la fonction
 GRANT EXECUTE ON FUNCTION public.check_user_in_game TO authenticated;
 GRANT EXECUTE ON FUNCTION public.check_user_in_game TO anon;
 
