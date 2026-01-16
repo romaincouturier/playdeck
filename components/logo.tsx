@@ -1,37 +1,16 @@
+import Image from 'next/image'
+
 export function Logo({ className = "h-8" }: { className?: string }) {
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <svg
-        viewBox="0 0 1580 530"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="h-full w-auto"
-      >
-        {/* Super en anthracite */}
-        <text
-          x="0"
-          y="400"
-          fontSize="320"
-          fontWeight="700"
-          fill="currentColor"
-          className="text-st-anthracite"
-        >
-          Super
-        </text>
-
-        {/* Tilt en anthracite avec le T incliné */}
-        <text
-          x="900"
-          y="400"
-          fontSize="320"
-          fontWeight="700"
-          fill="currentColor"
-          className="text-st-anthracite"
-          transform="skewX(-10)"
-        >
-          Tilt
-        </text>
-      </svg>
+    <div className={`relative flex items-center ${className}`}>
+      <Image
+        src="/logo.jpg"
+        alt="SuperTilt Logo"
+        width={1580}
+        height={530}
+        className="h-full w-auto object-contain"
+        priority
+      />
     </div>
   )
 }

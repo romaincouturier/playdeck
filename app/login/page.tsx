@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -20,7 +20,7 @@ export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleAuth = async (e: FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
@@ -53,7 +53,7 @@ export default function LoginPage() {
     }
   }
 
-  const handleJoinByCode = (e: React.FormEvent) => {
+  const handleJoinByCode = (e: FormEvent) => {
     e.preventDefault()
     if (gameCode.length === 6) {
       router.push(`/games/join/${gameCode.toUpperCase()}`)

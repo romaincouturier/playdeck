@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState, FormEvent, ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { joinGame } from '@/app/games/actions'
 import { Button } from '@/components/ui/button'
@@ -13,7 +13,7 @@ export function JoinGameForm() {
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
 
     if (code.length !== 6) {
@@ -33,7 +33,7 @@ export function JoinGameForm() {
     }
   }
 
-  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCodeChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.toUpperCase().slice(0, 6)
     setCode(value)
     setError(null)
