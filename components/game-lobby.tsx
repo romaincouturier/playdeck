@@ -159,9 +159,13 @@ export function GameLobby({
     setError(null)
 
     try {
-      await startGame(gameId)
-      // La redirection se fera via Realtime ou via l'action
+      const startedGameId = await startGame(gameId)
+      router.push(`/games/${startedGameId}`)
     } catch (err) {
+      // Ignorer l'erreur de redirection de Next.js
+      if (err instanceof Error && err.message === 'NEXT_REDIRECT') {
+        return
+      }
       console.error(err)
       setError(err instanceof Error ? err.message : 'Erreur lors du démarrage')
       setLoading(false)
@@ -279,13 +283,12 @@ export function GameLobby({
             return (
               <div
                 key={playerId}
-                className={`flex items-center gap-3 p-3 rounded-lg ${
-                  player.has_left
-                    ? 'bg-muted/30 opacity-50'
-                    : isCurrentPlayer
+                className={`flex items-center gap-3 p-3 rounded-lg ${player.has_left
+                  ? 'bg-muted/30 opacity-50'
+                  : isCurrentPlayer
                     ? 'bg-primary/10 border border-primary/20'
                     : 'bg-muted/50'
-                }`}
+                  }`}
               >
                 <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-semibold">
                   {index + 1}

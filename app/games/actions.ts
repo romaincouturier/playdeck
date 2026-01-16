@@ -355,7 +355,8 @@ export async function startGame(gameId: string) {
   }
 
   revalidatePath(`/games/${gameId}`)
-  redirect(`/games/${gameId}`)
+  // Retourner l'ID pour que le client gère la redirection et éviter les erreurs NEXT_REDIRECT
+  return gameId
 }
 
 export async function leaveGame(gameId: string) {
