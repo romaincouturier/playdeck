@@ -84,5 +84,36 @@
         "full_title": "Game full",
         "full_desc": "This game has reached the maximum number of players.",
         "not_found_desc": "The code {{code}} does not match any active game."
+    },
+    "upload": {
+        "add_card": "Add a card",
+        "cards_in_deck": "Cards in deck",
+        "none": "No cards in this deck. Add one above!",
+        "drag_drop": "Drag and drop your images here or click to select",
+        "format_hint": "PNG, JPG, GIF up to 10 MB - Multiple selection allowed",
+        "select_button": "Select images",
+        "uploading": "Uploading...",
+        "type_error": "The file must be an image",
+        "size_error": "Image too large. Max 10 MB",
+        "limit_error": "You can only add {{count}} more card(s)",
+        "added": "Added!"
+    },
+    "edit_card": {
+        "title": "Edit card",
+        "desc": "Replace this card's image with a new one",
+        "current": "Current image",
+        "new": "New image",
+        "change": "Change image",
+        "select": "Select a new image",
+        "cancel": "Cancel",
+        "submit": "Update",
+        "submitting": "Updating...",
+        "select_error": "Please select an image",
+        "success": "Card updated",
+        "error": "Error updating the card"
+    },
+    "card_grid": {
+        "delete_confirm": "Are you sure you want to delete this card?",
+        "delete_error": "Error deleting the card"
     }
 }

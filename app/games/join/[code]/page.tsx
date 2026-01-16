@@ -134,7 +134,7 @@ export default async function JoinGameWithCodePage({ params }: JoinGameWithCodeP
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
             <h1 className="text-2xl font-bold mb-4">{t('game.full_title')}</h1>
             <p className="text-muted-foreground mb-6">
-              {t('game.full_desc')}
+              {t('game.full_desc')} ({game.max_players})
             </p>
             <a
               href="/decks"

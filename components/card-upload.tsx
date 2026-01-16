@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { uploadCard } from '@/app/decks/[id]/actions'
 import { Button } from '@/components/ui/button'
 import { Upload, X, CheckCircle2, AlertCircle } from 'lucide-react'
+import { useI18n } from '@/lib/i18n/i18n-context'
 
 interface CardUploadProps {
   deckId: string
@@ -21,6 +22,7 @@ interface FilePreview {
 }
 
 export function CardUpload({ deckId, cardCount }: CardUploadProps) {
+  const { t } = useI18n()
   const [dragActive, setDragActive] = useState(false)
   const [previews, setPreviews] = useState<FilePreview[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -37,13 +39,12 @@ export function CardUpload({ deckId, cardCount }: CardUploadProps) {
 
   const validateFile = (file: File): string | null => {
     if (!file.type.startsWith('image/')) {
-      return 'Le fichier doit être une image'
+      return t('upload.type_error')
     }
 
     const maxSize = 10 * 1024 * 1024 // 10 MB
     if (file.size > maxSize) {
-      const sizeMB = (file.size / (1024 * 1024)).toFixed(2)
-      return `Image trop grande (${sizeMB} MB). Max 10 MB`
+      return t('upload.size_error')
     }
 
     return null
@@ -54,7 +55,7 @@ export function CardUpload({ deckId, cardCount }: CardUploadProps) {
     const availableSlots = 500 - cardCount - previews.length
 
     if (fileArray.length > availableSlots) {
-      alert(`Vous ne pouvez ajouter que ${availableSlots} carte(s) supplémentaire(s)`)
+      alert(t('upload.limit_error').replace('{{count}}', availableSlots.toString()))
       return
     }
 
@@ -99,7 +100,7 @@ export function CardUpload({ deckId, cardCount }: CardUploadProps) {
         ))
       } catch (error) {
         // Mettre à jour le statut à "error"
-        const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+        const errorMessage = error instanceof Error ? error.message : t('login.error_occurred')
         setPreviews(prev => prev.map(p =>
           p.id === preview.id ? { ...p, status: 'error', error: errorMessage } : p
         ))
@@ -164,11 +165,10 @@ export function CardUpload({ deckId, cardCount }: CardUploadProps) {
     <div className="space-y-4">
       {/* Zone d'upload */}
       <div
-        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-          dragActive
+        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive
             ? 'border-primary bg-primary/10'
             : 'border-border hover:border-primary/50'
-        }`}
+          }`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
@@ -186,10 +186,10 @@ export function CardUpload({ deckId, cardCount }: CardUploadProps) {
           <Upload className="h-10 w-10 text-muted-foreground" />
           <div>
             <p className="font-medium">
-              Glissez-déposez vos images ici ou cliquez pour sélectionner
+              {t('upload.drag_drop')}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              PNG, JPG, GIF jusqu&apos;à 10 MB - Sélection multiple autorisée ({cardCount + previews.length}/500 cartes)
+              {t('upload.format_hint')} ({cardCount + previews.length}/500 {t('upload.cards_in_deck').toLowerCase()})
             </p>
           </div>
           <Button
@@ -199,7 +199,7 @@ export function CardUpload({ deckId, cardCount }: CardUploadProps) {
             disabled={hasUploading || cardCount + previews.length >= 500}
             className="mt-2"
           >
-            {hasUploading ? `Upload en cours (${uploadingCount})...` : 'Sélectionner des images'}
+            {hasUploading ? `${t('upload.uploading')} (${uploadingCount})...` : t('upload.select_button')}
           </Button>
         </div>
       </div>
@@ -240,13 +240,13 @@ export function CardUpload({ deckId, cardCount }: CardUploadProps) {
                   {preview.status === 'uploading' && (
                     <>
                       <div className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full" />
-                      <span>Upload...</span>
+                      <span>{t('upload.uploading').split('...')[0]}...</span>
                     </>
                   )}
                   {preview.status === 'success' && (
                     <>
                       <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      <span className="text-green-500">Ajouté !</span>
+                      <span className="text-green-500">{t('upload.added')}</span>
                     </>
                   )}
                   {preview.status === 'error' && (

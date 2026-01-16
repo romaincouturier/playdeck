@@ -5,6 +5,7 @@ import { CardGrid } from '@/components/card-grid'
 import { Button } from '@/components/ui/button'
 import { Footer } from '@/components/footer'
 import { ArrowLeft } from 'lucide-react'
+import { getTranslations } from '@/lib/i18n/i18n-server'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -14,6 +15,7 @@ export default async function DeckDetailPage({ params }: PageProps) {
   const { id } = await params
   const deck = await getDeck(id)
   const cards = await getCards(id)
+  const t = await getTranslations()
 
   return (
     <div className="min-h-screen bg-st-gray dark:bg-st-anthracite flex flex-col">
@@ -40,20 +42,20 @@ export default async function DeckDetailPage({ params }: PageProps) {
       <main className="container mx-auto px-4 py-8">
         <div className="space-y-8">
           <div>
-            <h2 className="text-xl font-semibold mb-4">Ajouter une carte</h2>
+            <h2 className="text-xl font-semibold mb-4">{t('upload.add_card')}</h2>
             <CardUpload deckId={id} cardCount={cards.length} />
           </div>
 
           <div>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">
-                Cartes du deck ({cards.length}/500)
+                {t('upload.cards_in_deck')} ({cards.length}/500)
               </h2>
             </div>
             {cards.length === 0 ? (
               <div className="text-center py-16 border-2 border-dashed rounded-lg">
                 <p className="text-muted-foreground">
-                  Aucune carte dans ce deck. Ajoutez-en une ci-dessus !
+                  {t('upload.none')}
                 </p>
               </div>
             ) : (

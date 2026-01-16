@@ -84,5 +84,36 @@
         "full_title": "Partie complète",
         "full_desc": "Cette partie a atteint le nombre maximum de joueurs.",
         "not_found_desc": "Le code {{code}} ne correspond à aucune partie active."
+    },
+    "upload": {
+        "add_card": "Ajouter une carte",
+        "cards_in_deck": "Cartes du deck",
+        "none": "Aucune carte dans ce deck. Ajoutez-en une ci-dessus !",
+        "drag_drop": "Glissez-déposez vos images ici ou cliquez pour sélectionner",
+        "format_hint": "PNG, JPG, GIF jusqu'à 10 MB - Sélection multiple autorisée",
+        "select_button": "Sélectionner des images",
+        "uploading": "Upload en cours...",
+        "type_error": "Le fichier doit être une image",
+        "size_error": "Image trop grande. Max 10 MB",
+        "limit_error": "Vous ne pouvez ajouter que {{count}} carte(s) supplémentaire(s)",
+        "added": "Ajouté !"
+    },
+    "edit_card": {
+        "title": "Modifier la carte",
+        "desc": "Remplacez l'image de cette carte par une nouvelle",
+        "current": "Image actuelle",
+        "new": "Nouvelle image",
+        "change": "Changer l'image",
+        "select": "Sélectionner une nouvelle image",
+        "cancel": "Annuler",
+        "submit": "Mettre à jour",
+        "submitting": "Mise à jour...",
+        "select_error": "Veuillez sélectionner une image",
+        "success": "Carte mise à jour",
+        "error": "Erreur lors de la mise à jour de la carte"
+    },
+    "card_grid": {
+        "delete_confirm": "Êtes-vous sûr de vouloir supprimer cette carte ?",
+        "delete_error": "Erreur lors de la suppression de la carte"
     }
 }

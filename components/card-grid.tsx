@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { CardImage } from '@/components/card-image'
 import { CardEditDialog } from '@/components/card-edit-dialog'
 import { Trash2 } from 'lucide-react'
+import { useI18n } from '@/lib/i18n/i18n-context'
 
 interface Card {
   id: string
@@ -22,11 +23,12 @@ interface CardGridProps {
 }
 
 export function CardGrid({ cards, deckId }: CardGridProps) {
+  const { t } = useI18n()
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const router = useRouter()
 
   const handleDelete = async (cardId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette carte ?')) return
+    if (!confirm(t('card_grid.delete_confirm'))) return
 
     setDeletingId(cardId)
     try {
@@ -34,7 +36,7 @@ export function CardGrid({ cards, deckId }: CardGridProps) {
       router.refresh()
     } catch (error) {
       console.error(error)
-      alert('Erreur lors de la suppression de la carte')
+      alert(t('card_grid.delete_error'))
     } finally {
       setDeletingId(null)
     }

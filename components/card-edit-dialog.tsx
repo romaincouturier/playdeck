@@ -16,6 +16,7 @@ import { CardImage } from '@/components/card-image'
 import { Pencil, Upload } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { useI18n } from '@/lib/i18n/i18n-context'
 
 interface CardEditDialogProps {
   card: {
@@ -27,6 +28,7 @@ interface CardEditDialogProps {
 }
 
 export function CardEditDialog({ card }: CardEditDialogProps) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
@@ -50,7 +52,7 @@ export function CardEditDialog({ card }: CardEditDialogProps) {
     e.preventDefault()
 
     if (!selectedFile) {
-      alert('Veuillez sélectionner une image')
+      alert(t('edit_card.select_error'))
       return
     }
 
@@ -63,7 +65,7 @@ export function CardEditDialog({ card }: CardEditDialogProps) {
       router.refresh()
     } catch (error) {
       console.error(error)
-      alert(error instanceof Error ? error.message : 'Erreur lors de la mise à jour de la carte')
+      alert(error instanceof Error ? error.message : t('edit_card.error'))
     } finally {
       setUploading(false)
     }
@@ -95,14 +97,14 @@ export function CardEditDialog({ card }: CardEditDialogProps) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Modifier la carte</DialogTitle>
+          <DialogTitle>{t('edit_card.title')}</DialogTitle>
           <DialogDescription>
-            Remplacez l'image de cette carte par une nouvelle
+            {t('edit_card.desc')}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label>Image actuelle</Label>
+            <Label>{t('edit_card.current')}</Label>
             <div className="w-full max-w-[200px] mx-auto aspect-[2/3] rounded-lg overflow-hidden border">
               <CardImage
                 src={card.image_url}
@@ -114,7 +116,7 @@ export function CardEditDialog({ card }: CardEditDialogProps) {
 
           {preview && (
             <div className="space-y-2">
-              <Label>Nouvelle image</Label>
+              <Label>{t('edit_card.new')}</Label>
               <div className="w-full max-w-[200px] mx-auto aspect-[2/3] rounded-lg overflow-hidden border">
                 <img src={preview} alt="Aperçu" className="w-full h-full object-cover" />
               </div>
@@ -123,7 +125,7 @@ export function CardEditDialog({ card }: CardEditDialogProps) {
 
           <div className="space-y-2">
             <Label htmlFor="card-image">
-              {preview ? 'Changer l\'image' : 'Sélectionner une nouvelle image'}
+              {preview ? t('edit_card.change') : t('edit_card.select')}
             </Label>
             <Input
               ref={fileInputRef}
@@ -142,10 +144,10 @@ export function CardEditDialog({ card }: CardEditDialogProps) {
               onClick={() => setOpen(false)}
               disabled={uploading}
             >
-              Annuler
+              {t('edit_card.cancel')}
             </Button>
             <Button type="submit" disabled={uploading || !selectedFile}>
-              {uploading ? 'Mise à jour...' : 'Mettre à jour'}
+              {uploading ? t('edit_card.submitting') : t('edit_card.submit')}
             </Button>
           </div>
         </form>
