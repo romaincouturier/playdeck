@@ -331,12 +331,18 @@ export async function startGame(gameId: string) {
   }
 
   // Mettre à jour le statut de la partie
+  const firstPlayer = players[0]
+  const firstPlayerId = firstPlayer.user_id || firstPlayer.guest_session_id
+  const isGuestFirst = !firstPlayer.user_id && !!firstPlayer.guest_session_id
+
   const { error: updateError } = await supabase
     .from('games')
     .update({
       status: 'playing',
       started_at: new Date().toISOString(),
-      current_turn_player_id: players[0].user_id,
+      current_turn_player_id: isGuestFirst ? null : firstPlayer.user_id,
+      current_turn_guest_id: isGuestFirst ? firstPlayer.guest_session_id : null,
+      current_phase_id: 'main'
     })
     .eq('id', gameId)
 

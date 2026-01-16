@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { GameBoard } from '@/components/game-board'
 import { getGuestSession } from '@/lib/guest-session'
+import { fetchGameState } from '@/lib/game/state-utils'
 
 interface GamePageProps {
   params: Promise<{ id: string }>
@@ -15,7 +16,6 @@ export default async function GamePage({ params }: GamePageProps) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Check if guest
   const guestSession = await getGuestSession()
 
   if (!user && !guestSession) {
@@ -25,118 +25,51 @@ export default async function GamePage({ params }: GamePageProps) {
   const playerId = user?.id || guestSession?.sessionId || ''
   const isGuest = !user && !!guestSession
 
-  // Récupérer les informations de la partie
-  const { data: game, error: gameError } = await supabase
-    .from('games')
-    .select('id, code, status, current_turn_player_id, deck_id, host_id')
-    .eq('id', id)
-    .single()
-
-  if (gameError || !game) {
+  let gameState;
+  try {
+    gameState = await fetchGameState(id)
+  } catch (error) {
+    console.error('Error fetching game state:', error)
     redirect('/decks')
   }
 
-  // Si la partie est en attente, rediriger vers le lobby
-  if (game.status === 'waiting') {
+  if (gameState.status === 'waiting') {
     redirect(`/games/${id}/lobby`)
   }
 
-  // Si la partie est terminée
-  if (game.status === 'finished') {
+  if (gameState.status === 'finished') {
     redirect('/decks')
   }
 
-  // Vérifier que l'utilisateur/invité est dans la partie
-  const { data: player } = await supabase
-    .from('game_players')
-    .select('user_id, player_order, is_host, guest_name, guest_session_id, has_left')
-    .eq('game_id', id)
-    .or(user ? `user_id.eq.${user.id}` : `guest_session_id.eq.${guestSession?.sessionId}`)
-    .single()
-
-  if (!player) {
+  // Vérifier que le joueur fait partie de la partie
+  const isPlayerInGame = gameState.players.some(p => (p.user_id || p.guest_session_id) === playerId)
+  if (!isPlayerInGame) {
     redirect('/decks')
   }
 
-  // Récupérer tous les joueurs
-  const { data: players } = await supabase
-    .from('game_players')
-    .select('user_id, player_order, is_host, guest_name, guest_session_id, has_left')
-    .eq('game_id', id)
-    .order('player_order')
+  // Map to GameBoard props
+  const deckConfig = gameState.deck_config
+  const handZone = deckConfig.zones.find(z => z.type === 'HAND' && z.scope === 'PLAYER')
+  const deckZone = deckConfig.zones.find(z => z.type === 'DECK')
+  const discardZone = deckConfig.zones.find(z => z.type === 'DISCARD' || z.type === 'PLAY_AREA')
 
-  // Récupérer le nom du deck
-  const { data: deck } = await supabase
-    .from('decks')
-    .select('name')
-    .eq('id', game.deck_id)
-    .single()
-
-  // Récupérer les cartes du joueur (user ou guest)
-  const { data: hand } = await supabase
-    .from('game_cards')
-    .select(`
-      id,
-      position,
-      card:cards(id, image_url)
-    `)
-    .eq('game_id', id)
-    .eq('location', 'hand')
-    .or(user ? `owner_user_id.eq.${user.id}` : `owner_guest_session_id.eq.${guestSession?.sessionId}`)
-    .order('position')
-
-  // Compter les cartes dans la pioche
-  const { count: deckCount } = await supabase
-    .from('game_cards')
-    .select('*', { count: 'exact', head: true })
-    .eq('game_id', id)
-    .eq('location', 'deck')
-
-  // Compter les cartes dans la défausse
-  const { count: discardCount } = await supabase
-    .from('game_cards')
-    .select('*', { count: 'exact', head: true })
-    .eq('game_id', id)
-    .eq('location', 'discard')
-
-  // Récupérer la dernière carte de la défausse
-  const { data: topDiscard } = await supabase
-    .from('game_cards')
-    .select(`
-      id,
-      position,
-      card:cards(id, image_url)
-    `)
-    .eq('game_id', id)
-    .eq('location', 'discard')
-    .order('position', { ascending: false })
-    .limit(1)
-    .single()
+  const myHand = gameState.cards
+    .filter(c => c.location === handZone?.id && c.owner_id === playerId)
+    .sort((a: any, b: any) => a.position - b.position)
 
   return (
     <div className="min-h-screen bg-st-gray dark:bg-st-anthracite">
       <GameBoard
         gameId={id}
-        deckName={deck?.name || 'Deck'}
-        currentTurnPlayerId={game.current_turn_player_id}
+        deckName={deckConfig.game_mode}
+        gameState={gameState}
         playerId={playerId}
         isGuest={isGuest}
-        players={players || []}
-        hand={(hand || []).map((card) => ({
-          id: card.id,
-          position: card.position,
-          imageUrl: (card.card as any)?.image_url || '',
+        hand={myHand.map((c: any) => ({
+          id: c.id,
+          position: c.position,
+          imageUrl: c.image_url,
         }))}
-        deckCount={deckCount || 0}
-        discardCount={discardCount || 0}
-        topDiscardCard={
-          topDiscard
-            ? {
-                id: topDiscard.id,
-                imageUrl: (topDiscard.card as any)?.image_url || '',
-              }
-            : null
-        }
       />
     </div>
   )
