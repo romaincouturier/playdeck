@@ -84,5 +84,36 @@
         "full_title": "Partida llena",
         "full_desc": "Esta partida ha alcanzado el número máximo de jugadores.",
         "not_found_desc": "El código {{code}} no coincide con ninguna partida activa."
+    },
+    "upload": {
+        "add_card": "Añadir una carta",
+        "cards_in_deck": "Cartas en la baraja",
+        "none": "No hay cartas en esta baraja. ¡Añade una arriba!",
+        "drag_drop": "Arrastra y suelta tus imágenes aquí o haz clic para seleccionar",
+        "format_hint": "PNG, JPG, GIF hasta 10 MB - Se permite selección múltiple",
+        "select_button": "Seleccionar imágenes",
+        "uploading": "Subiendo...",
+        "type_error": "El archivo debe ser una imagen",
+        "size_error": "Imagen demasiado grande. Máx. 10 MB",
+        "limit_error": "Solo puedes añadir {{count}} carta(s) más",
+        "added": "¡Añadida!"
+    },
+    "edit_card": {
+        "title": "Editar carta",
+        "desc": "Reemplaza la imagen de esta carta por una nueva",
+        "current": "Imagen actual",
+        "new": "Nueva imagen",
+        "change": "Cambiar imagen",
+        "select": "Seleccionar una imagen nueva",
+        "cancel": "Cancelar",
+        "submit": "Actualizar",
+        "submitting": "Actualizando...",
+        "select_error": "Por favor, selecciona una imagen",
+        "success": "Carta actualizada",
+        "error": "Error al actualizar la carta"
+    },
+    "card_grid": {
+        "delete_confirm": "¿Estás seguro de que quieres eliminar esta carta?",
+        "delete_error": "Error al eliminar la carta"
     }
 }

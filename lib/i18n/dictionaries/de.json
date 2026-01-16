@@ -84,5 +84,36 @@
         "full_title": "Spiel voll",
         "full_desc": "Dieses Spiel hat die maximale Anzahl an Spielern erreicht.",
         "not_found_desc": "Der Code {{code}} stimmt mit keinem aktiven Spiel überein."
+    },
+    "upload": {
+        "add_card": "Karte hinzufügen",
+        "cards_in_deck": "Karten im Deck",
+        "none": "Keine Karten in diesem Deck. Füge oben eine hinzu!",
+        "drag_drop": "Ziehen Sie Ihre Bilder hierher oder klicken Sie zum Auswählen",
+        "format_hint": "PNG, JPG, GIF bis zu 10 MB - Mehrfachauswahl erlaubt",
+        "select_button": "Bilder auswählen",
+        "uploading": "Wird hochgeladen...",
+        "type_error": "Die Datei muss ein Bild sein",
+        "size_error": "Bild zu groß. Max. 10 MB",
+        "limit_error": "Sie können nur noch {{count}} Karte(n) hinzufügen",
+        "added": "Hinzugefügt!"
+    },
+    "edit_card": {
+        "title": "Karte bearbeiten",
+        "desc": "Ersetzen Sie das Bild dieser Karte durch ein neues",
+        "current": "Aktuelles Bild",
+        "new": "Neues Bild",
+        "change": "Bild ändern",
+        "select": "Neues Bild auswählen",
+        "cancel": "Abbrechen",
+        "submit": "Aktualisieren",
+        "submitting": "Wird aktualisiert...",
+        "select_error": "Bitte wählen Sie ein Bild aus",
+        "success": "Karte aktualisiert",
+        "error": "Fehler beim Aktualisieren der Karte"
+    },
+    "card_grid": {
+        "delete_confirm": "Sind Sie sicher, dass Sie diese Karte löschen möchten?",
+        "delete_error": "Fehler beim Löschen der Karte"
     }
 }
