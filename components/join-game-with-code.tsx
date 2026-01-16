@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
 import { Users, Play } from 'lucide-react'
+import { useI18n } from '@/lib/i18n/i18n-context'
 
 interface JoinGameWithCodeProps {
   gameCode: string
@@ -15,6 +16,7 @@ interface JoinGameWithCodeProps {
 }
 
 export function JoinGameWithCode({ gameCode, gameStatus }: JoinGameWithCodeProps) {
+  const { t } = useI18n()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [loading, setLoading] = useState(false)
@@ -30,14 +32,14 @@ export function JoinGameWithCode({ gameCode, gameStatus }: JoinGameWithCodeProps
       const fullName = `${firstName} ${lastName}`.trim()
 
       if (fullName.length < 2) {
-        throw new Error('Veuillez entrer votre nom complet')
+        throw new Error(t('game.name_error'))
       }
 
       const gameId = await joinGameAsGuest(gameCode, fullName)
       router.push(`/games/${gameId}/lobby`)
     } catch (err: any) {
       console.error(err)
-      setError(err.message || 'Une erreur est survenue')
+      setError(err.message || t('login.error_occurred'))
       setLoading(false)
     }
   }
@@ -47,9 +49,9 @@ export function JoinGameWithCode({ gameCode, gameStatus }: JoinGameWithCodeProps
       <div className="min-h-screen flex items-center justify-center bg-st-gray dark:bg-st-anthracite">
         <div className="max-w-md w-full mx-4">
           <Card className="p-8 text-center">
-            <h1 className="text-2xl font-bold mb-4">Partie déjà commencée</h1>
+            <h1 className="text-2xl font-bold mb-4">{t('game.status_not_waiting_title')}</h1>
             <p className="text-muted-foreground">
-              Cette partie a déjà commencé ou est terminée.
+              {t('game.status_not_waiting_desc')}
             </p>
           </Card>
         </div>
@@ -65,10 +67,10 @@ export function JoinGameWithCode({ gameCode, gameStatus }: JoinGameWithCodeProps
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
             <Users className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold mb-2">Rejoindre la partie</h1>
+          <h1 className="text-3xl font-bold mb-2">{t('game.join_title')}</h1>
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-lg border">
             <Play className="w-4 h-4" />
-            <span className="text-sm text-muted-foreground">Code :</span>
+            <span className="text-sm text-muted-foreground">{t('game.code_label')} :</span>
             <span className="text-2xl font-mono font-bold tracking-wider">{gameCode}</span>
           </div>
         </div>
@@ -78,18 +80,18 @@ export function JoinGameWithCode({ gameCode, gameStatus }: JoinGameWithCodeProps
           <form onSubmit={handleJoin} className="space-y-4">
             <div className="text-center mb-4">
               <p className="text-sm text-muted-foreground">
-                Entrez votre nom pour rejoindre la partie en tant qu&apos;invité
+                {t('game.guest_hint')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="firstName">Prénom</Label>
+              <Label htmlFor="firstName">{t('game.first_name')}</Label>
               <Input
                 id="firstName"
                 type="text"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                placeholder="Jean"
+                placeholder={t('game.first_name_placeholder')}
                 required
                 disabled={loading}
                 minLength={2}
@@ -97,13 +99,13 @@ export function JoinGameWithCode({ gameCode, gameStatus }: JoinGameWithCodeProps
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lastName">Nom</Label>
+              <Label htmlFor="lastName">{t('game.last_name')}</Label>
               <Input
                 id="lastName"
                 type="text"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                placeholder="Dupont"
+                placeholder={t('game.last_name_placeholder')}
                 required
                 disabled={loading}
                 minLength={2}
@@ -117,7 +119,7 @@ export function JoinGameWithCode({ gameCode, gameStatus }: JoinGameWithCodeProps
             )}
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Connexion...' : 'Rejoindre la partie'}
+              {loading ? t('game.connecting') : t('game.join_title')}
             </Button>
           </form>
         </Card>
@@ -125,7 +127,7 @@ export function JoinGameWithCode({ gameCode, gameStatus }: JoinGameWithCodeProps
         {/* Info */}
         <div className="text-center text-sm text-muted-foreground">
           <p>
-            Vous rejoignez en tant qu&apos;invité. Aucun compte n&apos;est nécessaire.
+            {t('game.guest_info')}
           </p>
         </div>
       </div>

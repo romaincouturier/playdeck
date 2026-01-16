@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { deleteDeck, duplicateDeck } from '@/app/decks/actions'
+import { useI18n } from '@/lib/i18n/i18n-context'
 import {
   Card,
   CardContent,
@@ -29,11 +30,12 @@ interface Deck {
 }
 
 export function DeckCard({ deck }: { deck: Deck }) {
+  const { t, locale } = useI18n()
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
   const handleDelete = async () => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce deck ?')) return
+    if (!confirm(t('decks.delete_confirm'))) return
 
     setLoading(true)
     try {
@@ -41,7 +43,7 @@ export function DeckCard({ deck }: { deck: Deck }) {
       router.refresh()
     } catch (error) {
       console.error(error)
-      alert('Erreur lors de la suppression du deck')
+      alert(t('decks.delete_error'))
     } finally {
       setLoading(false)
     }
@@ -57,7 +59,7 @@ export function DeckCard({ deck }: { deck: Deck }) {
       }
     } catch (error) {
       console.error(error)
-      alert('Erreur lors de la duplication du deck')
+      alert(t('decks.duplicate_error'))
     } finally {
       setLoading(false)
     }
@@ -70,7 +72,7 @@ export function DeckCard({ deck }: { deck: Deck }) {
           <div className="flex-1">
             <CardTitle className="line-clamp-1">{deck.name}</CardTitle>
             <CardDescription className="line-clamp-2 mt-1.5">
-              {deck.description || 'Aucune description'}
+              {deck.description || t('decks.no_description')}
             </CardDescription>
           </div>
           <DropdownMenu>
@@ -82,14 +84,14 @@ export function DeckCard({ deck }: { deck: Deck }) {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={handleDuplicate}>
                 <Copy className="mr-2 h-4 w-4" />
-                Dupliquer
+                {t('decks.duplicate')}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={handleDelete}
                 className="text-destructive"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Supprimer
+                {t('decks.delete')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -97,13 +99,13 @@ export function DeckCard({ deck }: { deck: Deck }) {
       </CardHeader>
       <CardContent>
         <div className="text-sm text-muted-foreground">
-          Créé le {new Date(deck.created_at).toLocaleDateString('fr-FR')}
+          {t('decks.created_on')} {new Date(deck.created_at).toLocaleDateString(locale === 'fr' ? 'fr-FR' : locale === 'en' ? 'en-US' : locale === 'es' ? 'es-ES' : 'de-DE')}
         </div>
       </CardContent>
       <CardFooter>
         <Link href={`/decks/${deck.id}`} className="w-full">
           <Button variant="outline" className="w-full" disabled={loading}>
-            Voir les cartes
+            {t('decks.view_cards')}
           </Button>
         </Link>
       </CardFooter>

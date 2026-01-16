@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { JoinGameWithCode } from '@/components/join-game-with-code'
 import { getGuestSession } from '@/lib/guest-session'
+import { getTranslations } from '@/lib/i18n/i18n-server'
 
 interface JoinGameWithCodePageProps {
   params: Promise<{ code: string }>
@@ -9,6 +10,7 @@ interface JoinGameWithCodePageProps {
 
 export default async function JoinGameWithCodePage({ params }: JoinGameWithCodePageProps) {
   const { code } = await params
+  const t = await getTranslations()
   const supabase = await createClient()
 
   const {
@@ -32,15 +34,15 @@ export default async function JoinGameWithCodePage({ params }: JoinGameWithCodeP
       <div className="min-h-screen flex items-center justify-center bg-st-gray dark:bg-st-anthracite">
         <div className="max-w-md w-full mx-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
-            <h1 className="text-2xl font-bold mb-4">Partie introuvable</h1>
+            <h1 className="text-2xl font-bold mb-4">{t('common.not_found')}</h1>
             <p className="text-muted-foreground mb-6">
-              Le code <span className="font-mono font-semibold">{code.toUpperCase()}</span> ne correspond à aucune partie active.
+              {t('game.not_found_desc').replace('{{code}}', code.toUpperCase())}
             </p>
             <a
               href="/decks"
               className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground h-10 px-4 py-2"
             >
-              Retour à l'accueil
+              {t('common.back')}
             </a>
           </div>
         </div>
@@ -103,15 +105,15 @@ export default async function JoinGameWithCodePage({ params }: JoinGameWithCodeP
       <div className="min-h-screen flex items-center justify-center bg-st-gray dark:bg-st-anthracite">
         <div className="max-w-md w-full mx-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
-            <h1 className="text-2xl font-bold mb-4">Partie déjà commencée</h1>
+            <h1 className="text-2xl font-bold mb-4">{t('game.status_not_waiting_title')}</h1>
             <p className="text-muted-foreground mb-6">
-              Cette partie a déjà commencé ou est terminée.
+              {t('game.status_not_waiting_desc')}
             </p>
             <a
               href="/decks"
               className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground h-10 px-4 py-2"
             >
-              Retour à l'accueil
+              {t('common.back')}
             </a>
           </div>
         </div>
@@ -130,15 +132,15 @@ export default async function JoinGameWithCodePage({ params }: JoinGameWithCodeP
       <div className="min-h-screen flex items-center justify-center bg-st-gray dark:bg-st-anthracite">
         <div className="max-w-md w-full mx-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
-            <h1 className="text-2xl font-bold mb-4">Partie complète</h1>
+            <h1 className="text-2xl font-bold mb-4">{t('game.full_title')}</h1>
             <p className="text-muted-foreground mb-6">
-              Cette partie a atteint le nombre maximum de joueurs ({game.max_players}).
+              {t('game.full_desc')}
             </p>
             <a
               href="/decks"
               className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground h-10 px-4 py-2"
             >
-              Retour à l'accueil
+              {t('common.back')}
             </a>
           </div>
         </div>
@@ -161,15 +163,15 @@ export default async function JoinGameWithCodePage({ params }: JoinGameWithCodeP
       <div className="min-h-screen flex items-center justify-center bg-st-gray dark:bg-st-anthracite">
         <div className="max-w-md w-full mx-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
-            <h1 className="text-2xl font-bold mb-4">Erreur</h1>
+            <h1 className="text-2xl font-bold mb-4">{t('common.error')}</h1>
             <p className="text-muted-foreground mb-6">
-              Impossible de rejoindre la partie. Veuillez réessayer.
+              {t('login.error_occurred')}
             </p>
             <a
               href="/decks"
               className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground h-10 px-4 py-2"
             >
-              Retour à l'accueil
+              {t('common.back')}
             </a>
           </div>
         </div>

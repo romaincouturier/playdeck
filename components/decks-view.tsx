@@ -1,0 +1,100 @@
+'use client'
+
+import React from 'react'
+import Link from 'next/link'
+import { Plus, Users, Globe, LogOut } from 'lucide-react'
+import { useI18n } from '@/lib/i18n/i18n-context'
+import { Button } from '@/components/ui/button'
+import { Logo } from '@/components/logo'
+import { Footer } from '@/components/footer'
+import { DeckCard } from '@/components/deck-card'
+import { CreateDeckDialog } from '@/components/create-deck-dialog'
+import { signOut } from '@/app/decks/actions'
+
+interface DecksViewProps {
+    decks: any[]
+}
+
+export function DecksView({ decks }: DecksViewProps) {
+    const { t } = useI18n()
+
+    return (
+        <div className="min-h-screen bg-st-gray dark:bg-st-anthracite">
+            <header className="border-b bg-white/80 dark:bg-st-anthracite/80 backdrop-blur-sm sticky top-0 z-10 border-st-gray dark:border-st-anthracite">
+                <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+                    <Logo className="h-8" />
+                    <div className="flex items-center gap-2">
+                        <Link href="/games/create">
+                            <Button variant="default" size="sm">
+                                <Plus className="mr-2 h-4 w-4" />
+                                {t('common.create')}
+                            </Button>
+                        </Link>
+                        <Link href="/games/join">
+                            <Button variant="outline" size="sm">
+                                <Users className="mr-2 h-4 w-4" />
+                                {t('common.join')}
+                            </Button>
+                        </Link>
+                        <Link href="/settings">
+                            <Button variant="outline" size="sm">
+                                <Globe className="mr-2 h-4 w-4" />
+                                {t('common.settings')}
+                            </Button>
+                        </Link>
+                        <form action={signOut}>
+                            <Button variant="outline" size="sm">
+                                <LogOut className="mr-2 h-4 w-4" />
+                                {t('common.logout')}
+                            </Button>
+                        </form>
+                    </div>
+                </div>
+            </header>
+
+            <main className="container mx-auto px-4 py-8">
+                <div className="mb-8 flex justify-between items-center">
+                    <div>
+                        <h2 className="text-3xl font-bold mb-2">{t('decks.title')}</h2>
+                        <p className="text-muted-foreground">
+                            {t('decks.subtitle')}
+                        </p>
+                    </div>
+                    <CreateDeckDialog />
+                </div>
+
+                {decks.length === 0 ? (
+                    <div className="text-center py-16">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+                            <svg
+                                className="w-8 h-8 text-primary"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                                />
+                            </svg>
+                        </div>
+                        <h3 className="text-xl font-semibold mb-2">{t('decks.empty')}</h3>
+                        <p className="text-muted-foreground mb-6">
+                            {t('decks.empty_desc')}
+                        </p>
+                        <CreateDeckDialog />
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {decks.map((deck) => (
+                            <DeckCard key={deck.id} deck={deck} />
+                        ))}
+                    </div>
+                )}
+            </main>
+            <Footer />
+        </div>
+    )
+}
