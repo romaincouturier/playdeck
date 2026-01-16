@@ -61,7 +61,11 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
     .eq('game_id', id)
     .order('player_order')
 
+  console.log('[LobbyPage] Players lookup:', { players, playersError })
+
   if (playersError || !players) {
+    console.error('[LobbyPage] Erreur récupération joueurs:', playersError)
+    console.error('[LobbyPage] Redirection vers /decks car joueurs introuvables')
     redirect('/decks')
   }
 
@@ -69,7 +73,11 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
   const isInGame = players.some(
     (p) => p.user_id === user?.id || p.guest_session_id === guestSession?.sessionId
   )
+
+  console.log('[LobbyPage] User check:', { userId: user?.id, guestSessionId: guestSession?.sessionId, isInGame })
+
   if (!isInGame) {
+    console.error('[LobbyPage] Utilisateur pas dans la partie, redirection vers /decks')
     redirect('/decks')
   }
 
