@@ -35,8 +35,14 @@ export function CreateGameForm({ decks }: CreateGameFormProps) {
       const gameId = await createGame(selectedDeckId, maxPlayers)
       console.log('[CreateGameForm] Partie créée:', gameId)
 
+      // Petit délai pour permettre aux politiques RLS de se propager
+      // Cela garantit que le joueur est visible dans game_players
+      console.log('[CreateGameForm] Attente propagation RLS...')
+      await new Promise(resolve => setTimeout(resolve, 500))
+
       // Utiliser router.push() pour la redirection côté client
       // Cela évite les problèmes de timing avec les politiques RLS
+      console.log('[CreateGameForm] Redirection vers lobby')
       router.push(`/games/${gameId}/lobby`)
     } catch (err) {
       // Next.js utilise une erreur spéciale pour les redirections
