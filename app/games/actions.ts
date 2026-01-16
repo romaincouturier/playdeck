@@ -132,11 +132,13 @@ export async function createGame(deckId: string, maxPlayers: number) {
     throw new Error(`Erreur lors de l'ajout du joueur: ${playerError.message} (${playerError.code})`)
   }
 
-  console.log('[CreateGame] Joueur ajouté, redirection vers lobby')
+  console.log('[CreateGame] Joueur ajouté, retour de l\'ID de la partie')
 
   revalidatePath('/games')
   revalidatePath(`/games/${game.id}/lobby`)
-  redirect(`/games/${game.id}/lobby`)
+
+  // Retourner l'ID au lieu de rediriger pour éviter les problèmes de timing RLS
+  return game.id
 }
 
 export async function joinGame(code: string) {

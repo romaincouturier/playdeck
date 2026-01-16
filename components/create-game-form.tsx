@@ -32,9 +32,12 @@ export function CreateGameForm({ decks }: CreateGameFormProps) {
 
     try {
       console.log('[CreateGameForm] Début création partie')
-      await createGame(selectedDeckId, maxPlayers)
-      console.log('[CreateGameForm] Création terminée, redirection en cours')
-      // La redirection est gérée par la Server Action
+      const gameId = await createGame(selectedDeckId, maxPlayers)
+      console.log('[CreateGameForm] Partie créée:', gameId)
+
+      // Utiliser router.push() pour la redirection côté client
+      // Cela évite les problèmes de timing avec les politiques RLS
+      router.push(`/games/${gameId}/lobby`)
     } catch (err) {
       // Next.js utilise une erreur spéciale pour les redirections
       // On ne doit pas la traiter comme une vraie erreur
@@ -65,8 +68,8 @@ export function CreateGameForm({ decks }: CreateGameFormProps) {
               <Card
                 key={deck.id}
                 className={`p-4 cursor-pointer transition-colors ${selectedDeckId === deck.id
-                    ? 'border-primary bg-primary/5'
-                    : 'hover:border-primary/50'
+                  ? 'border-primary bg-primary/5'
+                  : 'hover:border-primary/50'
                   }`}
                 onClick={() => setSelectedDeckId(deck.id)}
               >
@@ -84,8 +87,8 @@ export function CreateGameForm({ decks }: CreateGameFormProps) {
                   </div>
                   <div
                     className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedDeckId === deck.id
-                        ? 'border-primary bg-primary'
-                        : 'border-muted-foreground'
+                      ? 'border-primary bg-primary'
+                      : 'border-muted-foreground'
                       }`}
                   >
                     {selectedDeckId === deck.id && (

@@ -29,7 +29,11 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
     .eq('id', id)
     .single()
 
+  console.log('[LobbyPage] Game lookup:', { id, game, gameError })
+
   if (gameError || !game) {
+    console.error('[LobbyPage] Erreur récupération partie:', gameError)
+    console.error('[LobbyPage] Redirection vers /decks car partie introuvable')
     redirect('/decks')
   }
 
