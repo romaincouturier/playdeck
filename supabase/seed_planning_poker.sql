@@ -41,30 +41,30 @@ BEGIN
     );
 
     -- 2. Create Card Types
-    INSERT INTO public.card_types (deck_id, name, value, properties) VALUES
-        (new_deck_id, '0', 0, '{"weight": 1}'::jsonb) RETURNING id INTO type_0_id;
-    INSERT INTO public.card_types (deck_id, name, value, properties) VALUES
-        (new_deck_id, '1', 1, '{"weight": 1}'::jsonb) RETURNING id INTO type_1_id;
-    INSERT INTO public.card_types (deck_id, name, value, properties) VALUES
-        (new_deck_id, '2', 2, '{"weight": 1}'::jsonb) RETURNING id INTO type_2_id;
-    INSERT INTO public.card_types (deck_id, name, value, properties) VALUES
-        (new_deck_id, '3', 3, '{"weight": 1}'::jsonb) RETURNING id INTO type_3_id;
-    INSERT INTO public.card_types (deck_id, name, value, properties) VALUES
-        (new_deck_id, '5', 5, '{"weight": 1}'::jsonb) RETURNING id INTO type_5_id;
-    INSERT INTO public.card_types (deck_id, name, value, properties) VALUES
-        (new_deck_id, '8', 8, '{"weight": 1}'::jsonb) RETURNING id INTO type_8_id;
-    INSERT INTO public.card_types (deck_id, name, value, properties) VALUES
-        (new_deck_id, '13', 13, '{"weight": 1}'::jsonb) RETURNING id INTO type_13_id;
-    INSERT INTO public.card_types (deck_id, name, value, properties) VALUES
-        (new_deck_id, '20', 20, '{"weight": 1}'::jsonb) RETURNING id INTO type_20_id;
-    INSERT INTO public.card_types (deck_id, name, value, properties) VALUES
-        (new_deck_id, '40', 40, '{"weight": 1}'::jsonb) RETURNING id INTO type_40_id;
-    INSERT INTO public.card_types (deck_id, name, value, properties) VALUES
-        (new_deck_id, '100', 100, '{"weight": 1}'::jsonb) RETURNING id INTO type_100_id;
-    INSERT INTO public.card_types (deck_id, name, value, properties) VALUES
-        (new_deck_id, '?', NULL, '{"weight": 1, "special": "question"}'::jsonb) RETURNING id INTO type_ques_id;
-    INSERT INTO public.card_types (deck_id, name, value, properties) VALUES
-        (new_deck_id, 'Coffee', NULL, '{"weight": 1, "special": "coffee"}'::jsonb) RETURNING id INTO type_coffee_id;
+    INSERT INTO public.card_types (deck_id, name, properties) VALUES
+        (new_deck_id, '0', '{"weight": 1, "value": 0}'::jsonb) RETURNING id INTO type_0_id;
+    INSERT INTO public.card_types (deck_id, name, properties) VALUES
+        (new_deck_id, '1', '{"weight": 1, "value": 1}'::jsonb) RETURNING id INTO type_1_id;
+    INSERT INTO public.card_types (deck_id, name, properties) VALUES
+        (new_deck_id, '2', '{"weight": 1, "value": 2}'::jsonb) RETURNING id INTO type_2_id;
+    INSERT INTO public.card_types (deck_id, name, properties) VALUES
+        (new_deck_id, '3', '{"weight": 1, "value": 3}'::jsonb) RETURNING id INTO type_3_id;
+    INSERT INTO public.card_types (deck_id, name, properties) VALUES
+        (new_deck_id, '5', '{"weight": 1, "value": 5}'::jsonb) RETURNING id INTO type_5_id;
+    INSERT INTO public.card_types (deck_id, name, properties) VALUES
+        (new_deck_id, '8', '{"weight": 1, "value": 8}'::jsonb) RETURNING id INTO type_8_id;
+    INSERT INTO public.card_types (deck_id, name, properties) VALUES
+        (new_deck_id, '13', '{"weight": 1, "value": 13}'::jsonb) RETURNING id INTO type_13_id;
+    INSERT INTO public.card_types (deck_id, name, properties) VALUES
+        (new_deck_id, '20', '{"weight": 1, "value": 20}'::jsonb) RETURNING id INTO type_20_id;
+    INSERT INTO public.card_types (deck_id, name, properties) VALUES
+        (new_deck_id, '40', '{"weight": 1, "value": 40}'::jsonb) RETURNING id INTO type_40_id;
+    INSERT INTO public.card_types (deck_id, name, properties) VALUES
+        (new_deck_id, '100', '{"weight": 1, "value": 100}'::jsonb) RETURNING id INTO type_100_id;
+    INSERT INTO public.card_types (deck_id, name, properties) VALUES
+        (new_deck_id, '?', '{"weight": 1, "special": "question"}'::jsonb) RETURNING id INTO type_ques_id;
+    INSERT INTO public.card_types (deck_id, name, properties) VALUES
+        (new_deck_id, 'Coffee', '{"weight": 1, "special": "coffee"}'::jsonb) RETURNING id INTO type_coffee_id;
 
     -- 3. Create Cards (one of each for testing, in a real scenario we'd create batches per player)
     -- Actually, Planning Poker decks should have one set of these per max_player.
