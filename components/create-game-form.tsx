@@ -31,11 +31,15 @@ export function CreateGameForm({ decks }: CreateGameFormProps) {
     setError(null)
 
     try {
+      console.log('[CreateGameForm] Début création partie')
       await createGame(selectedDeckId, maxPlayers)
+      console.log('[CreateGameForm] Création terminée, redirection en cours')
       // La redirection est gérée par la Server Action
     } catch (err) {
-      console.error(err)
-      setError(err instanceof Error ? err.message : 'Erreur lors de la création de la partie')
+      console.error('[CreateGameForm] Erreur capturée:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la création de la partie'
+      console.error('[CreateGameForm] Message erreur:', errorMessage)
+      setError(errorMessage)
       setLoading(false)
     }
   }
@@ -108,8 +112,12 @@ export function CreateGameForm({ decks }: CreateGameFormProps) {
       </div>
 
       {error && (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-          <p className="text-sm text-destructive">{error}</p>
+        <div className="p-4 bg-destructive/10 border-2 border-destructive rounded-lg space-y-2">
+          <h3 className="font-bold text-destructive">Erreur lors de la création de la partie</h3>
+          <p className="text-sm text-destructive whitespace-pre-wrap">{error}</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            💡 Conseil : Ouvrez la console du navigateur (F12) pour voir les logs détaillés
+          </p>
         </div>
       )}
 

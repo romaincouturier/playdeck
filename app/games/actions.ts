@@ -8,50 +8,65 @@ import { createGuestSession, getGuestSession } from '@/lib/guest-session'
 export async function createGame(deckId: string, maxPlayers: number) {
   const supabase = await createClient()
 
-  // Vérifier l'authentification
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  try {
+    // Vérifier l'authentification
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-  if (!user) {
-    throw new Error('Non authentifié')
-  }
-
-  // Vérifier que le deck appartient à l'utilisateur
-  const { data: deck, error: deckError } = await supabase
-    .from('decks')
-    .select('id, user_id')
-    .eq('id', deckId)
-    .eq('user_id', user.id)
-    .single()
-
-  if (deckError || !deck) {
-    throw new Error('Deck introuvable')
-  }
-
-  // Vérifier que le deck a des cartes
-  const { data: cards, error: cardsError } = await supabase
-    .from('cards')
-    .select('id')
-    .eq('deck_id', deckId)
-
-  if (cardsError || !cards || cards.length === 0) {
-    throw new Error('Le deck doit contenir au moins une carte')
-  }
-
-  // Générer un code unique
-  let code = ''
-  let attempts = 0
-  const maxAttempts = 10
-
-  while (attempts < maxAttempts) {
-    // Appeler la fonction SQL pour générer le code
-    const { data: codeData, error: codeError } = await supabase.rpc('generate_game_code')
-
-    if (codeError) {
-      console.error('Erreur génération code:', codeError)
-      throw new Error(`Erreur lors de la génération du code: ${codeError.message}`)
+    if (!user) {
+      throw new Error('Non authentifié')
     }
+
+    console.log('[CreateGame] Début création partie pour deck:', deckId)
+
+    // Vérifier que le deck appartient à l'utilisateur
+    const { data: deck, error: deckError } = await supabase
+      .from('decks')
+      .select('id, user_id')
+      .eq('id', deckId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (deckError) {
+      console.error('[CreateGame] Erreur deck:', deckError)
+      throw new Error(`Deck introuvable: ${deckError.message}`)
+    }
+
+    if (!deck) {
+      throw new Error('Deck introuvable')
+    }
+
+    // Vérifier que le deck a des cartes
+    const { data: cards, error: cardsError } = await supabase
+      .from('cards')
+      .select('id')
+      .eq('deck_id', deckId)
+
+    if (cardsError) {
+      console.error('[CreateGame] Erreur cartes:', cardsError)
+      throw new Error(`Erreur de vérification des cartes: ${cardsError.message}`)
+    }
+
+    if (!cards || cards.length === 0) {
+      throw new Error('Le deck doit contenir au moins une carte')
+    }
+
+    console.log('[CreateGame] Deck valide avec', cards.length, 'cartes')
+
+    // Générer un code unique
+    let code = ''
+    let attempts = 0
+    const maxAttempts = 10
+
+    while (attempts < maxAttempts) {
+      // Appeler la fonction SQL pour générer le code
+      const { data: codeData, error: codeError } = await supabase.rpc('generate_game_code')
+
+      if (codeError) {
+        console.error('[CreateGame] Erreur génération code:', codeError)
+        throw new Error(`ERREUR SQL: La fonction generate_game_code() n'existe pas dans Supabase. Veuillez exécuter le fichier supabase/game-schema.sql dans votre base de données.`)
+      }
 
     if (!codeData) {
       throw new Error('Aucun code généré')
@@ -73,50 +88,60 @@ export async function createGame(deckId: string, maxPlayers: number) {
     attempts++
   }
 
-  if (!code || attempts >= maxAttempts) {
-    throw new Error('Impossible de générer un code unique')
-  }
+    if (!code || attempts >= maxAttempts) {
+      throw new Error('Impossible de générer un code unique')
+    }
 
-  // Créer la partie
-  const { data: game, error: gameError } = await supabase
-    .from('games')
-    .insert({
-      host_id: user.id,
-      deck_id: deckId,
-      code,
-      max_players: maxPlayers,
-      status: 'waiting',
+    console.log('[CreateGame] Code généré:', code)
+
+    // Créer la partie
+    const { data: game, error: gameError } = await supabase
+      .from('games')
+      .insert({
+        host_id: user.id,
+        deck_id: deckId,
+        code,
+        max_players: maxPlayers,
+        status: 'waiting',
+      })
+      .select()
+      .single()
+
+    if (gameError) {
+      console.error('[CreateGame] Erreur création partie:', gameError)
+      throw new Error(`Erreur lors de la création de la partie: ${gameError.message} (${gameError.code})`)
+    }
+
+    if (!game) {
+      throw new Error('Aucune partie créée')
+    }
+
+    console.log('[CreateGame] Partie créée:', game.id)
+
+    // Ajouter l'hôte comme premier joueur
+    const { error: playerError } = await supabase.from('game_players').insert({
+      game_id: game.id,
+      user_id: user.id,
+      player_order: 0,
+      is_host: true,
     })
-    .select()
-    .single()
 
-  if (gameError) {
-    console.error('Erreur création partie:', gameError)
-    throw new Error(`Erreur lors de la création de la partie: ${gameError.message} (${gameError.code})`)
+    if (playerError) {
+      console.error('[CreateGame] Erreur ajout joueur:', playerError)
+      // Supprimer la partie si l'ajout du joueur échoue
+      await supabase.from('games').delete().eq('id', game.id)
+      throw new Error(`Erreur lors de l'ajout du joueur: ${playerError.message} (${playerError.code})`)
+    }
+
+    console.log('[CreateGame] Joueur ajouté, redirection vers lobby')
+
+    revalidatePath('/games')
+    revalidatePath(`/games/${game.id}/lobby`)
+    redirect(`/games/${game.id}/lobby`)
+  } catch (error) {
+    console.error('[CreateGame] Erreur globale:', error)
+    throw error
   }
-
-  if (!game) {
-    throw new Error('Aucune partie créée')
-  }
-
-  // Ajouter l'hôte comme premier joueur
-  const { error: playerError } = await supabase.from('game_players').insert({
-    game_id: game.id,
-    user_id: user.id,
-    player_order: 0,
-    is_host: true,
-  })
-
-  if (playerError) {
-    console.error('Erreur ajout joueur:', playerError)
-    // Supprimer la partie si l'ajout du joueur échoue
-    await supabase.from('games').delete().eq('id', game.id)
-    throw new Error(`Erreur lors de l'ajout du joueur: ${playerError.message} (${playerError.code})`)
-  }
-
-  revalidatePath('/games')
-  revalidatePath(`/games/${game.id}/lobby`)
-  redirect(`/games/${game.id}/lobby`)
 }
 
 export async function joinGame(code: string) {
