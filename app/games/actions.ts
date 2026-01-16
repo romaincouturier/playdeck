@@ -354,8 +354,7 @@ export async function startGame(gameId: string) {
     throw new Error('Erreur lors de la distribution des cartes')
   }
 
-  revalidatePath(`/games/${gameId}`)
-  // Retourner l'ID pour que le client gère la redirection et éviter les erreurs NEXT_REDIRECT
+  // On ne revalide pas car on quitte le lobby
   return gameId
 }
 
@@ -383,6 +382,6 @@ export async function leaveGame(gameId: string) {
     throw new Error('Erreur lors de la sortie de la partie')
   }
 
-  revalidatePath('/games')
+  revalidatePath('/decks')
   redirect('/decks')
 }

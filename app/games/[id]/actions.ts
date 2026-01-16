@@ -234,6 +234,6 @@ export async function endGame(gameId: string) {
     throw new Error('Erreur lors de la fin de la partie')
   }
 
-  revalidatePath(`/games/${gameId}`)
+  // On ne revalide pas car on quitte la page de toute façon
   return { success: true }
 }

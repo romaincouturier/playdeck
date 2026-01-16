@@ -67,22 +67,20 @@ export function GameBoard({
   // Charger le nombre de cartes par joueur
   useEffect(() => {
     const loadPlayerCardCounts = async () => {
+      const { data: cards } = await supabase
+        .from('game_cards')
+        .select('owner_user_id, owner_guest_session_id')
+        .eq('game_id', gameId)
+        .eq('location', 'hand')
+
       const counts: Record<string, number> = {}
-
-      for (const player of players) {
-        const playerUniqueId = player.user_id || player.guest_session_id
-        if (!playerUniqueId) continue
-
-        const { count } = await supabase
-          .from('game_cards')
-          .select('*', { count: 'exact', head: true })
-          .eq('game_id', gameId)
-          .eq('location', 'hand')
-          .or(player.user_id
-            ? `owner_user_id.eq.${player.user_id}`
-            : `owner_guest_session_id.eq.${player.guest_session_id}`)
-
-        counts[playerUniqueId] = count || 0
+      if (cards) {
+        cards.forEach(card => {
+          const ownerId = card.owner_user_id || card.owner_guest_session_id
+          if (ownerId) {
+            counts[ownerId] = (counts[ownerId] || 0) + 1
+          }
+        })
       }
 
       setPlayerCardCounts(counts)
@@ -230,23 +228,22 @@ export function GameBoard({
           }
 
           // Recharger les comptes de cartes des joueurs
-          const counts: Record<string, number> = {}
-          for (const player of players) {
-            const playerUniqueId = player.user_id || player.guest_session_id
-            if (!playerUniqueId) continue
+          const { data: cardsData } = await supabase
+            .from('game_cards')
+            .select('owner_user_id, owner_guest_session_id')
+            .eq('game_id', gameId)
+            .eq('location', 'hand')
 
-            const { count } = await supabase
-              .from('game_cards')
-              .select('*', { count: 'exact', head: true })
-              .eq('game_id', gameId)
-              .eq('location', 'hand')
-              .or(player.user_id
-                ? `owner_user_id.eq.${player.user_id}`
-                : `owner_guest_session_id.eq.${player.guest_session_id}`)
-
-            counts[playerUniqueId] = count || 0
+          const newCounts: Record<string, number> = {}
+          if (cardsData) {
+            cardsData.forEach(card => {
+              const ownerId = card.owner_user_id || card.owner_guest_session_id
+              if (ownerId) {
+                newCounts[ownerId] = (newCounts[ownerId] || 0) + 1
+              }
+            })
           }
-          setPlayerCardCounts(counts)
+          setPlayerCardCounts(newCounts)
         }
       )
       .subscribe()
@@ -363,15 +360,12 @@ export function GameBoard({
                 return (
                   <div
                     key={playerUniqueId}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
-                      isCurrentUser
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${isCurrentUser
                         ? 'bg-primary/10 border border-primary/20'
                         : 'bg-muted'
-                    } ${
-                      currentTurnPlayerId === player.user_id ? 'ring-2 ring-st-yellow' : ''
-                    } ${
-                      player.has_left ? 'opacity-50' : ''
-                    }`}
+                      } ${currentTurnPlayerId === player.user_id ? 'ring-2 ring-st-yellow' : ''
+                      } ${player.has_left ? 'opacity-50' : ''
+                      }`}
                   >
                     <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold">
                       {index + 1}

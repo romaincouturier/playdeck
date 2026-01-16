@@ -179,6 +179,9 @@ export function GameLobby({
     try {
       await leaveGame(gameId)
     } catch (err) {
+      if (err instanceof Error && err.message === 'NEXT_REDIRECT') {
+        return
+      }
       console.error(err)
       setError(err instanceof Error ? err.message : 'Erreur lors de la sortie')
       setLoading(false)
