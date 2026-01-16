@@ -48,7 +48,7 @@ export async function fetchGameState(gameId: string): Promise<GameState> {
                 parameters: r.action_parameters
             }
         })),
-        victory_conditions: game.victory_conditions || []
+        victory_conditions: (game.victory_conditions as any) || []
     };
 
     // 3. Fetch players
