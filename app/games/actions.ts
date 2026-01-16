@@ -322,7 +322,7 @@ export async function startGame(gameId: string) {
   // Vérifier qu'il y a au moins 2 joueurs
   const { data: players, error: playersError } = await supabase
     .from('game_players')
-    .select('user_id')
+    .select('user_id, guest_session_id')
     .eq('game_id', gameId)
     .order('player_order')
 
