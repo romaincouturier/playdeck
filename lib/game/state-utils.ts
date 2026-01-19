@@ -30,7 +30,7 @@ export async function fetchGameState(gameId: string): Promise<GameState> {
     const deckConfig: DeckConfig = {
         game_mode: deck.game_mode,
         min_players: deck.min_players,
-        max_players: deck.max_players,
+        max_players: game.max_players,
         settings: deck.settings,
         turn_structure: deck.turn_structure,
         card_types: deck.card_types,
