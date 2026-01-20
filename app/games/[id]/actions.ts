@@ -4,9 +4,6 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { fetchGameState } from '@/lib/game/state-utils'
 import { GameEngine } from '@/lib/game/engine'
-import { GameCardState } from '@/lib/game/engine'
-import { ZoneConfig } from '@/types/engine.types'
-import { GamePlayerState } from '@/lib/game/engine'
 
 export async function drawCard(gameId: string, guestSessionId?: string) {
   const supabase = await createClient()

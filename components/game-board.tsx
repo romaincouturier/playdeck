@@ -9,7 +9,6 @@ import { Card } from '@/components/ui/card'
 import { CardImage } from '@/components/card-image'
 import { Crown, ArrowRight, Users } from 'lucide-react'
 import { GameState, GameCardState, GamePlayerState } from '@/lib/game/engine'
-import { fetchGameState } from '@/lib/game/state-utils' // Note: This might need a client version or just use Supabase directly for updates
 
 interface HandCard {
   id: string
