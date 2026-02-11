@@ -444,6 +444,165 @@ COMMENT ON COLUMN cards.numeric_values IS 'Valeurs numériques multiples (ex: {"
 CREATE INDEX IF NOT EXISTS idx_cards_numeric_values ON cards USING GIN (numeric_values);
 
 -- ============================================================================
+
+-- Table: card_marks - Marquages visuels sur cartes (P2 - MAR-01/02)
+CREATE TABLE IF NOT EXISTS card_marks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  card_id UUID NOT NULL,
+  mark_type TEXT NOT NULL CHECK (mark_type IN ('BADGE', 'COLOR', 'ICON')),
+  mark_value TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+COMMENT ON TABLE card_marks IS 'Marquages visuels sur cartes (badge, couleur, icône)';
+
+-- Index
+CREATE INDEX IF NOT EXISTS idx_card_marks_game ON card_marks(game_id);
+CREATE INDEX IF NOT EXISTS idx_card_marks_card ON card_marks(game_id, card_id);
+
+-- RLS
+ALTER TABLE card_marks ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Players can view marks in their games"
+  ON card_marks FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM game_players
+      WHERE game_id = card_marks.game_id
+      AND (user_id = auth.uid() OR guest_session_id = current_setting('app.guest_session_id', true))
+    )
+  );
+
+CREATE POLICY "Game master can manage marks"
+  ON card_marks FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM game_master
+      WHERE game_id = card_marks.game_id
+      AND user_id = auth.uid()
+    )
+  );
+
+-- ============================================================================
+
+-- Table: game_snapshots - Sauvegardes de parties (P2 - PAR-07)
+CREATE TABLE IF NOT EXISTS game_snapshots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  snapshot_data JSONB NOT NULL,
+  version TEXT DEFAULT '2.0.0',
+  checksum TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+COMMENT ON TABLE game_snapshots IS 'Snapshots de sauvegardes de parties complètes';
+COMMENT ON COLUMN game_snapshots.snapshot_data IS 'État complet de la partie en JSON';
+COMMENT ON COLUMN game_snapshots.checksum IS 'Hash MD5 pour validation intégrité';
+
+-- Index
+CREATE INDEX IF NOT EXISTS idx_game_snapshots_game ON game_snapshots(game_id, created_at DESC);
+
+-- RLS
+ALTER TABLE game_snapshots ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Game master can manage snapshots"
+  ON game_snapshots FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM game_master gm
+      JOIN games g ON gm.game_id = g.id
+      WHERE g.id = game_snapshots.game_id
+      AND gm.user_id = auth.uid()
+    )
+  );
+
+-- ============================================================================
+
+-- Table: predefined_games - Jeux prédéfinis (P2 - REG-03, IAM-01)
+CREATE TABLE IF NOT EXISTS predefined_games (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  rules_markdown TEXT NOT NULL,
+  deck_config JSONB NOT NULL,
+  default_zones JSONB NOT NULL,
+  default_turn_structure JSONB NOT NULL,
+  default_settings JSONB,
+  is_public BOOLEAN DEFAULT true,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+COMMENT ON TABLE predefined_games IS 'Bibliothèque de jeux prédéfinis (Belote, Poker, Tarot, etc.)';
+COMMENT ON COLUMN predefined_games.id IS 'Identifiant unique (ex: "belote-classique", "poker-texas")';
+
+-- Index
+CREATE INDEX IF NOT EXISTS idx_predefined_games_public ON predefined_games(is_public, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_predefined_games_creator ON predefined_games(created_by);
+
+-- RLS
+ALTER TABLE predefined_games ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public games are viewable by all"
+  ON predefined_games FOR SELECT
+  USING (is_public = true OR created_by = auth.uid());
+
+CREATE POLICY "Users can create predefined games"
+  ON predefined_games FOR INSERT
+  WITH CHECK (created_by = auth.uid());
+
+CREATE POLICY "Users can update own predefined games"
+  ON predefined_games FOR UPDATE
+  USING (created_by = auth.uid());
+
+-- ============================================================================
+
+-- Table: player_visibility_overrides - Surcharges visibilité (P1 - VIS-03, VIS-04)
+CREATE TABLE IF NOT EXISTS player_visibility_overrides (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  viewer_player_id UUID NOT NULL REFERENCES game_players(id) ON DELETE CASCADE,
+  target_player_id UUID REFERENCES game_players(id) ON DELETE CASCADE, -- NULL = open game
+  can_see_hand BOOLEAN DEFAULT false,
+  can_see_all_zones BOOLEAN DEFAULT false,
+  hide_own_cards BOOLEAN DEFAULT false, -- P2 - VIS-05
+  expires_at TIMESTAMPTZ, -- NULL = permanent
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+COMMENT ON TABLE player_visibility_overrides IS 'Surcharges temporaires ou permanentes de visibilité';
+COMMENT ON COLUMN player_visibility_overrides.target_player_id IS 'NULL = jeu ouvert (tous voient tout)';
+COMMENT ON COLUMN player_visibility_overrides.hide_own_cards IS 'P2: Cacher ses propres cartes au joueur';
+
+-- Index
+CREATE INDEX IF NOT EXISTS idx_visibility_overrides_game ON player_visibility_overrides(game_id);
+CREATE INDEX IF NOT EXISTS idx_visibility_overrides_viewer ON player_visibility_overrides(viewer_player_id);
+
+-- RLS
+ALTER TABLE player_visibility_overrides ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Players can view own visibility overrides"
+  ON player_visibility_overrides FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM game_players
+      WHERE id = player_visibility_overrides.viewer_player_id
+      AND (user_id = auth.uid() OR guest_session_id = current_setting('app.guest_session_id', true))
+    )
+  );
+
+CREATE POLICY "Game master can manage visibility overrides"
+  ON player_visibility_overrides FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM game_master
+      WHERE game_id = player_visibility_overrides.game_id
+      AND user_id = auth.uid()
+    )
+  );
+
+-- ============================================================================
 -- 3. FONCTIONS UTILITAIRES
 -- ============================================================================
 
@@ -650,10 +809,151 @@ CREATE TRIGGER update_game_rules_updated_at
   EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
+
+-- Fonction: Recycler défausse dans pioche (P1 - DEF-04)
+CREATE OR REPLACE FUNCTION recycle_discard_to_deck(p_game_id UUID, p_shuffle BOOLEAN DEFAULT true)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_discard_zone_id UUID;
+  v_deck_zone_id UUID;
+  v_cards_moved INTEGER;
+BEGIN
+  -- Trouver zones
+  SELECT id INTO v_discard_zone_id FROM zones WHERE game_id = p_game_id AND type = 'DISCARD';
+  SELECT id INTO v_deck_zone_id FROM zones WHERE game_id = p_game_id AND type = 'DECK';
+
+  -- Déplacer cartes
+  UPDATE game_cards
+  SET zone_id = v_deck_zone_id, position = 0
+  WHERE zone_id = v_discard_zone_id;
+
+  GET DIAGNOSTICS v_cards_moved = ROW_COUNT;
+
+  -- Optionnel : déclencher mélange (sera fait par primitive SHUFFLE_DECK après)
+
+  RETURN v_cards_moved;
+END;
+$$;
+
+COMMENT ON FUNCTION recycle_discard_to_deck IS 'Déplace toutes les cartes de la défausse vers la pioche';
+
+-- ============================================================================
+
+-- Fonction: Calculer score automatique (P2 - SCO-02)
+CREATE OR REPLACE FUNCTION calculate_player_score(p_game_id UUID, p_player_id UUID)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_score INTEGER := 0;
+  v_card RECORD;
+BEGIN
+  -- Récupérer toutes cartes du joueur (dans toutes zones sauf DECK)
+  FOR v_card IN
+    SELECT gc.id, c.numeric_values
+    FROM game_cards gc
+    JOIN cards c ON gc.card_id = c.id
+    WHERE gc.game_id = p_game_id
+    AND gc.owner_id = p_player_id
+    AND gc.zone_id NOT IN (SELECT id FROM zones WHERE game_id = p_game_id AND type = 'DECK')
+  LOOP
+    -- Ajouter valeur "scoring" si elle existe
+    IF v_card.numeric_values ? 'scoring' THEN
+      v_score := v_score + (v_card.numeric_values->>'scoring')::INTEGER;
+    ELSIF v_card.numeric_values ? 'base' THEN
+      v_score := v_score + (v_card.numeric_values->>'base')::INTEGER;
+    END IF;
+  END LOOP;
+
+  RETURN v_score;
+END;
+$$;
+
+COMMENT ON FUNCTION calculate_player_score IS 'Calcule automatiquement le score d''un joueur basé sur numeric_values des cartes';
+
+-- ============================================================================
+
+-- Fonction: Créer snapshot de partie (P2 - PAR-07)
+CREATE OR REPLACE FUNCTION create_game_snapshot(p_game_id UUID)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_snapshot_id UUID;
+  v_snapshot_data JSONB;
+  v_checksum TEXT;
+BEGIN
+  -- Construire snapshot JSON complet
+  SELECT jsonb_build_object(
+    'game', row_to_json(g.*),
+    'gameMaster', row_to_json(gm.*),
+    'players', (SELECT jsonb_agg(row_to_json(gp.*)) FROM game_players gp WHERE gp.game_id = p_game_id),
+    'zones', (SELECT jsonb_agg(row_to_json(z.*)) FROM zones z WHERE z.game_id = p_game_id),
+    'cards', (SELECT jsonb_agg(row_to_json(gc.*)) FROM game_cards gc WHERE gc.game_id = p_game_id),
+    'turnState', row_to_json(ts.*),
+    'rules', row_to_json(gr.*),
+    'actionsHistory', (SELECT jsonb_agg(row_to_json(pa.*)) FROM primitive_actions pa WHERE pa.game_id = p_game_id ORDER BY created_at)
+  )
+  INTO v_snapshot_data
+  FROM games g
+  LEFT JOIN game_master gm ON gm.game_id = g.id
+  LEFT JOIN turn_state ts ON ts.game_id = g.id
+  LEFT JOIN game_rules_text gr ON gr.game_id = g.id
+  WHERE g.id = p_game_id;
+
+  -- Calculer checksum
+  v_checksum := md5(v_snapshot_data::TEXT);
+
+  -- Insérer snapshot
+  INSERT INTO game_snapshots (game_id, snapshot_data, checksum)
+  VALUES (p_game_id, v_snapshot_data, v_checksum)
+  RETURNING id INTO v_snapshot_id;
+
+  RETURN v_snapshot_id;
+END;
+$$;
+
+COMMENT ON FUNCTION create_game_snapshot IS 'Crée un snapshot complet de l''état de la partie';
+
+-- ============================================================================
 -- 5. DONNÉES PAR DÉFAUT
 -- ============================================================================
 
--- Aucune donnée par défaut (parties créées dynamiquement)
+-- Insérer jeux prédéfinis de base
+INSERT INTO predefined_games (id, name, description, rules_markdown, deck_config, default_zones, default_turn_structure, default_settings, is_public)
+VALUES
+(
+  'bataille-classique',
+  'Bataille Classique',
+  'Jeu de bataille simple avec deck 52 cartes',
+  '# Bataille\n\nChaque joueur retourne une carte. Le plus fort remporte les cartes.\n\nEn cas d''égalité : bataille !',
+  '{"game_mode": "TURN_BASED", "min_players": 2, "max_players": 2}'::jsonb,
+  '[]'::jsonb,
+  '{"turn_order": "CLOCKWISE", "phases": [{"id": "main", "name": "Tour", "allowed_actions": ["FLIP_CARD", "PASS_TURN"], "auto_pass": false}]}'::jsonb,
+  '{}'::jsonb,
+  true
+),
+(
+  'uno-simple',
+  'Uno Simplifié',
+  'Variante simplifiée du Uno',
+  '# Uno Simplifié\n\nDéfaussez vos cartes en respectant couleur ou valeur.\n\nPremier à vider sa main gagne !',
+  '{"game_mode": "TURN_BASED", "min_players": 2, "max_players": 6}'::jsonb,
+  '[]'::jsonb,
+  '{"turn_order": "CLOCKWISE", "phases": [{"id": "main", "name": "Tour", "allowed_actions": ["PLAY_TO_CENTER", "DRAW_TOP", "PASS_TURN"], "auto_pass": false}]}'::jsonb,
+  '{}'::jsonb,
+  true
+)
+ON CONFLICT (id) DO NOTHING;
+
+COMMENT ON TABLE predefined_games IS 'Jeux prédéfinis incluant Bataille et Uno par défaut';
+
+-- ============================================================================
 
 -- ============================================================================
 -- FIN MIGRATION
