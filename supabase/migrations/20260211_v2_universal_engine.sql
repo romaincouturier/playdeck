@@ -802,8 +802,7 @@ BEGIN
   INTO v_player_ids
   FROM game_players
   WHERE game_id = p_game_id
-  AND role = 'PLAYER'
-  AND is_active = true;
+  AND role = 'PLAYER';
 
   -- Créer turn_state
   INSERT INTO turn_state (game_id, turn_order, current_player_id, direction, turn_number)
