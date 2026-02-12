@@ -17,8 +17,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [gameCode, setGameCode] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
+  const [isResetPassword, setIsResetPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [resetEmailSent, setResetEmailSent] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -44,6 +46,28 @@ export default function LoginPage() {
         router.push('/decks')
         router.refresh()
       }
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message)
+      } else {
+        setError(t('login.error_occurred'))
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResetPassword = async (e: FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      })
+      if (error) throw error
+      setResetEmailSent(true)
     } catch (error: unknown) {
       if (error instanceof Error) {
         setError(error.message)
@@ -97,62 +121,137 @@ export default function LoginPage() {
           <Card className="w-full shadow-lg border-st-anthracite/5 self-start">
             <CardHeader>
               <CardTitle className="text-2xl">
-                {isSignUp ? t('login.signup_title') : t('login.member_area')}
+                {isResetPassword
+                  ? t('login.reset_password_title')
+                  : isSignUp
+                    ? t('login.signup_title')
+                    : t('login.member_area')}
               </CardTitle>
               <CardDescription>
-                {isSignUp
-                  ? t('login.signup_desc')
-                  : t('login.login_desc')}
+                {isResetPassword
+                  ? t('login.reset_password_desc')
+                  : isSignUp
+                    ? t('login.signup_desc')
+                    : t('login.login_desc')}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleAuth} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">{t('login.email')}</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="exemple@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">{t('login.password')}</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
-                </div>
-                {error && (
-                  <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
-                    {error}
+              {isResetPassword ? (
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                  {resetEmailSent ? (
+                    <div className="text-sm text-green-600 bg-green-50 dark:bg-green-900/20 p-3 rounded-md">
+                      {t('login.reset_email_sent')}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="reset-email">{t('login.email')}</Label>
+                        <Input
+                          id="reset-email"
+                          type="email"
+                          placeholder="exemple@email.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                        />
+                      </div>
+                      {error && (
+                        <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+                          {error}
+                        </div>
+                      )}
+                      <Button type="submit" className="w-full" disabled={loading}>
+                        {loading ? t('login.loading') : t('login.send_reset_link')}
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full text-xs"
+                    onClick={() => {
+                      setIsResetPassword(false)
+                      setResetEmailSent(false)
+                      setError(null)
+                    }}
+                  >
+                    {t('login.back_to_login')}
+                  </Button>
+                </form>
+              ) : (
+                <form onSubmit={handleAuth} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">{t('login.email')}</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="exemple@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
                   </div>
-                )}
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading
-                    ? t('login.loading')
-                    : isSignUp
-                      ? t('login.signup_button')
-                      : t('login.login_button')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full text-xs"
-                  onClick={() => setIsSignUp(!isSignUp)}
-                >
-                  {isSignUp
-                    ? t('login.has_account')
-                    : t('login.no_account')}
-                </Button>
-              </form>
+                  {!isSignUp && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="password">{t('login.password')}</Label>
+                        <button
+                          type="button"
+                          onClick={() => setIsResetPassword(true)}
+                          className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+                        >
+                          {t('login.forgot_password')}
+                        </button>
+                      </div>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        minLength={6}
+                      />
+                    </div>
+                  )}
+                  {isSignUp && (
+                    <div className="space-y-2">
+                      <Label htmlFor="password">{t('login.password')}</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        minLength={6}
+                      />
+                    </div>
+                  )}
+                  {error && (
+                    <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+                      {error}
+                    </div>
+                  )}
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading
+                      ? t('login.loading')
+                      : isSignUp
+                        ? t('login.signup_button')
+                        : t('login.login_button')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full text-xs"
+                    onClick={() => setIsSignUp(!isSignUp)}
+                  >
+                    {isSignUp
+                      ? t('login.has_account')
+                      : t('login.no_account')}
+                  </Button>
+                </form>
+              )}
             </CardContent>
           </Card>
 

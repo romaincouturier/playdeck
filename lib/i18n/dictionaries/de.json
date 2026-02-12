@@ -20,7 +20,19 @@
         "enter_game": "Spiel betreten",
         "or": "Oder",
         "check_email": "Überprüfen Sie Ihre E-Mail, um Ihre Registrierung zu bestätigen!",
-        "error_occurred": "Ein Fehler ist aufgetreten"
+        "error_occurred": "Ein Fehler ist aufgetreten",
+        "forgot_password": "Passwort vergessen?",
+        "reset_password_title": "Passwort zurücksetzen",
+        "reset_password_desc": "Geben Sie Ihre E-Mail ein, um einen Link zum Zurücksetzen zu erhalten",
+        "send_reset_link": "Link senden",
+        "reset_email_sent": "E-Mail gesendet! Überprüfen Sie Ihren Posteingang.",
+        "back_to_login": "Zurück zur Anmeldung",
+        "new_password": "Neues Passwort",
+        "confirm_password": "Passwort bestätigen",
+        "update_password": "Passwort aktualisieren",
+        "password_updated": "Passwort erfolgreich aktualisiert!",
+        "passwords_no_match": "Passwörter stimmen nicht überein",
+        "updating": "Wird aktualisiert..."
     },
     "settings": {
         "title": "Einstellungen",
