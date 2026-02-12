@@ -539,6 +539,28 @@ BEGIN
   END IF;
 END $$;
 
+-- Convertir zone_id de TEXT vers UUID si nécessaire (après rename de location)
+DO $$
+DECLARE
+  current_type text;
+BEGIN
+  SELECT data_type INTO current_type
+  FROM information_schema.columns
+  WHERE table_name = 'game_cards' AND column_name = 'zone_id';
+
+  IF current_type = 'text' OR current_type = 'character varying' THEN
+    -- Supprimer les valeurs qui ne sont pas des UUID valides
+    UPDATE game_cards
+    SET zone_id = NULL
+    WHERE zone_id IS NOT NULL
+      AND zone_id !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+
+    -- Convertir la colonne en UUID
+    ALTER TABLE game_cards
+    ALTER COLUMN zone_id TYPE UUID USING zone_id::uuid;
+  END IF;
+END $$;
+
 -- Ajouter zone_id si elle n'existe pas (pour installations fraîches)
 ALTER TABLE game_cards
   ADD COLUMN IF NOT EXISTS zone_id UUID;
