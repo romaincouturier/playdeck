@@ -21,7 +21,7 @@ COMMENT ON COLUMN game_master.is_playing IS 'Le MJ participe comme joueur ou arb
 COMMENT ON COLUMN game_master.omniscient_mode IS 'Le MJ voit toutes les cartes de toutes les zones';
 
 -- Index
-CREATE INDEX idx_game_master_user ON game_master(user_id);
+CREATE INDEX IF NOT EXISTS idx_game_master_user ON game_master(user_id);
 
 -- RLS
 ALTER TABLE game_master ENABLE ROW LEVEL SECURITY;
@@ -77,9 +77,9 @@ COMMENT ON COLUMN zones.default_face IS 'Face par défaut quand carte arrive dan
 COMMENT ON COLUMN zones.owner_player_id IS 'NULL = zone globale, sinon zone d''un joueur spécifique';
 
 -- Index
-CREATE INDEX idx_zones_game ON zones(game_id);
-CREATE INDEX idx_zones_type ON zones(game_id, type);
-CREATE INDEX idx_zones_owner ON zones(owner_player_id);
+CREATE INDEX IF NOT EXISTS idx_zones_game ON zones(game_id);
+CREATE INDEX IF NOT EXISTS idx_zones_type ON zones(game_id, type);
+CREATE INDEX IF NOT EXISTS idx_zones_owner ON zones(owner_player_id);
 
 -- RLS
 ALTER TABLE zones ENABLE ROW LEVEL SECURITY;
@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS card_categories (
 COMMENT ON TABLE card_categories IS 'Catégories de cartes (atouts, honneurs, spéciales, etc.)';
 
 -- Index
-CREATE INDEX idx_card_categories_deck ON card_categories(deck_id);
+CREATE INDEX IF NOT EXISTS idx_card_categories_deck ON card_categories(deck_id);
 
 -- RLS
 ALTER TABLE card_categories ENABLE ROW LEVEL SECURITY;
@@ -157,8 +157,8 @@ CREATE TABLE IF NOT EXISTS card_category_membership (
 COMMENT ON TABLE card_category_membership IS 'Table de liaison : une carte peut appartenir à plusieurs catégories';
 
 -- Index
-CREATE INDEX idx_card_category_card ON card_category_membership(card_id);
-CREATE INDEX idx_card_category_category ON card_category_membership(category_id);
+CREATE INDEX IF NOT EXISTS idx_card_category_card ON card_category_membership(card_id);
+CREATE INDEX IF NOT EXISTS idx_card_category_category ON card_category_membership(category_id);
 
 -- RLS
 ALTER TABLE card_category_membership ENABLE ROW LEVEL SECURITY;
@@ -218,9 +218,9 @@ COMMENT ON COLUMN primitive_actions.action_type IS 'Type de primitive (REVEAL_TO
 COMMENT ON COLUMN primitive_actions.can_be_undone IS 'Si false, action ne peut pas être annulée';
 
 -- Index
-CREATE INDEX idx_primitive_actions_game ON primitive_actions(game_id, created_at DESC);
-CREATE INDEX idx_primitive_actions_actor ON primitive_actions(actor_id);
-CREATE INDEX idx_primitive_actions_type ON primitive_actions(game_id, action_type);
+CREATE INDEX IF NOT EXISTS idx_primitive_actions_game ON primitive_actions(game_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_primitive_actions_actor ON primitive_actions(actor_id);
+CREATE INDEX IF NOT EXISTS idx_primitive_actions_type ON primitive_actions(game_id, action_type);
 
 -- RLS
 ALTER TABLE primitive_actions ENABLE ROW LEVEL SECURITY;
@@ -302,7 +302,7 @@ COMMENT ON COLUMN turn_state.turn_order IS 'Array d''IDs game_players dans l''or
 COMMENT ON COLUMN turn_state.timer_seconds IS 'NULL = pas de timer, sinon durée en secondes';
 
 -- Index
-CREATE INDEX idx_turn_state_current_player ON turn_state(current_player_id);
+CREATE INDEX IF NOT EXISTS idx_turn_state_current_player ON turn_state(current_player_id);
 
 -- RLS
 ALTER TABLE turn_state ENABLE ROW LEVEL SECURITY;
@@ -344,8 +344,8 @@ COMMENT ON TABLE card_groups IS 'Groupes de cartes (brelan, suite, combinaison)'
 COMMENT ON COLUMN card_groups.card_ids IS 'Array d''IDs cartes du groupe';
 
 -- Index
-CREATE INDEX idx_card_groups_game ON card_groups(game_id);
-CREATE INDEX idx_card_groups_owner ON card_groups(owner_player_id);
+CREATE INDEX IF NOT EXISTS idx_card_groups_game ON card_groups(game_id);
+CREATE INDEX IF NOT EXISTS idx_card_groups_owner ON card_groups(owner_player_id);
 
 -- RLS
 ALTER TABLE card_groups ENABLE ROW LEVEL SECURITY;
