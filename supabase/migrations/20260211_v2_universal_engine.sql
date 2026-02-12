@@ -516,9 +516,51 @@ BEGIN
   END IF;
 END $$;
 
+-- Supprimer l'ancienne FK constraint sur zone_id si elle existe (après rename de location)
+-- et la recréer avec ON DELETE CASCADE pour assurer la cohérence
+DO $$
+DECLARE
+  constraint_name TEXT;
+BEGIN
+  -- Trouver le nom de la contrainte FK sur zone_id
+  SELECT tc.constraint_name INTO constraint_name
+  FROM information_schema.table_constraints tc
+  JOIN information_schema.key_column_usage kcu
+    ON tc.constraint_name = kcu.constraint_name
+    AND tc.table_schema = kcu.table_schema
+  WHERE tc.table_name = 'game_cards'
+    AND tc.table_schema = 'public'
+    AND kcu.column_name = 'zone_id'
+    AND tc.constraint_type = 'FOREIGN KEY';
+
+  -- Supprimer l'ancienne contrainte si elle existe
+  IF constraint_name IS NOT NULL THEN
+    EXECUTE format('ALTER TABLE game_cards DROP CONSTRAINT %I', constraint_name);
+  END IF;
+END $$;
+
 -- Ajouter zone_id si elle n'existe pas (pour installations fraîches)
 ALTER TABLE game_cards
-  ADD COLUMN IF NOT EXISTS zone_id UUID REFERENCES zones(id) ON DELETE CASCADE;
+  ADD COLUMN IF NOT EXISTS zone_id UUID;
+
+-- Ajouter la FK constraint avec ON DELETE CASCADE
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints tc
+    JOIN information_schema.key_column_usage kcu
+      ON tc.constraint_name = kcu.constraint_name
+      AND tc.table_schema = kcu.table_schema
+    WHERE tc.table_name = 'game_cards'
+      AND tc.table_schema = 'public'
+      AND kcu.column_name = 'zone_id'
+      AND tc.constraint_type = 'FOREIGN KEY'
+  ) THEN
+    ALTER TABLE game_cards
+      ADD CONSTRAINT game_cards_zone_id_fkey
+      FOREIGN KEY (zone_id) REFERENCES zones(id) ON DELETE CASCADE;
+  END IF;
+END $$;
 
 ALTER TABLE game_cards
   ADD COLUMN IF NOT EXISTS face_visible BOOLEAN DEFAULT false,
@@ -967,7 +1009,16 @@ BEGIN
   SELECT id INTO v_discard_zone_id FROM zones WHERE game_id = p_game_id AND type = 'DISCARD';
   SELECT id INTO v_deck_zone_id FROM zones WHERE game_id = p_game_id AND type = 'DECK';
 
-  -- Déplacer cartes
+  -- Valider que les zones existent
+  IF v_discard_zone_id IS NULL THEN
+    RAISE EXCEPTION 'DISCARD zone not found for game_id %', p_game_id;
+  END IF;
+
+  IF v_deck_zone_id IS NULL THEN
+    RAISE EXCEPTION 'DECK zone not found for game_id %', p_game_id;
+  END IF;
+
+  -- Déplacer cartes (retournera 0 si défausse vide, ce qui est un cas valide)
   UPDATE game_cards
   SET zone_id = v_deck_zone_id, position = 0
   WHERE zone_id = v_discard_zone_id;
@@ -1105,9 +1156,27 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  v_player_id UUID;
   v_invalid_count INTEGER;
+  v_array_length INTEGER;
+  v_distinct_count INTEGER;
 BEGIN
+  -- Vérifier que turn_order n'est pas NULL
+  IF NEW.turn_order IS NULL THEN
+    RAISE EXCEPTION 'turn_order cannot be NULL';
+  END IF;
+
+  -- Vérifier que turn_order n'est pas vide
+  v_array_length := array_length(NEW.turn_order, 1);
+  IF v_array_length IS NULL OR v_array_length = 0 THEN
+    RAISE EXCEPTION 'turn_order cannot be empty - must have at least one player';
+  END IF;
+
+  -- Vérifier qu'il n'y a pas de doublons
+  SELECT COUNT(DISTINCT unnest) INTO v_distinct_count FROM unnest(NEW.turn_order);
+  IF v_distinct_count < v_array_length THEN
+    RAISE EXCEPTION 'turn_order contains duplicate player IDs';
+  END IF;
+
   -- Vérifier que tous les IDs dans turn_order sont des joueurs valides
   SELECT COUNT(*)
   INTO v_invalid_count
@@ -1127,14 +1196,13 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION validate_turn_order IS 'Valide que turn_order contient uniquement des IDs de joueurs existants';
+COMMENT ON FUNCTION validate_turn_order IS 'Valide que turn_order contient uniquement des IDs de joueurs existants, sans doublons, et n''est ni NULL ni vide';
 
 -- Trigger pour valider turn_order
 DROP TRIGGER IF EXISTS validate_turn_order_trigger ON turn_state;
 CREATE TRIGGER validate_turn_order_trigger
   BEFORE INSERT OR UPDATE ON turn_state
   FOR EACH ROW
-  WHEN (NEW.turn_order IS NOT NULL AND array_length(NEW.turn_order, 1) > 0)
   EXECUTE FUNCTION validate_turn_order();
 
 -- Fonction: Valider que les UUIDs dans card_ids existent dans game_cards
