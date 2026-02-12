@@ -1071,6 +1071,84 @@ COMMENT ON FUNCTION recycle_discard_to_deck IS 'Déplace toutes les cartes de la
 
 -- ============================================================================
 
+-- Fonction: Distribuer des cartes aux joueurs
+CREATE OR REPLACE FUNCTION distribute_cards(p_game_id UUID, p_cards_per_player INTEGER)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_deck_zone_id UUID;
+  v_player RECORD;
+  v_card RECORD;
+  v_cards_dealt INTEGER := 0;
+  v_position INTEGER;
+BEGIN
+  -- Trouver la zone DECK
+  SELECT id INTO v_deck_zone_id
+  FROM zones
+  WHERE game_id = p_game_id AND type = 'DECK';
+
+  IF v_deck_zone_id IS NULL THEN
+    RAISE EXCEPTION 'DECK zone not found for game_id %', p_game_id;
+  END IF;
+
+  -- Pour chaque joueur actif
+  FOR v_player IN
+    SELECT gp.id as player_id, z.id as hand_zone_id
+    FROM game_players gp
+    JOIN zones z ON z.game_id = p_game_id
+      AND z.type = 'HAND'
+      AND z.owner_player_id = gp.id
+    WHERE gp.game_id = p_game_id
+      AND gp.role = 'PLAYER'
+    ORDER BY gp.created_at
+  LOOP
+    -- Récupérer la position actuelle maximale dans la main du joueur
+    SELECT COALESCE(MAX(position), -1) INTO v_position
+    FROM game_cards
+    WHERE zone_id = v_player.hand_zone_id;
+
+    -- Distribuer p_cards_per_player cartes au joueur
+    FOR v_card IN
+      SELECT id
+      FROM game_cards
+      WHERE zone_id = v_deck_zone_id
+      ORDER BY position
+      LIMIT p_cards_per_player
+    LOOP
+      v_position := v_position + 1;
+
+      UPDATE game_cards
+      SET
+        zone_id = v_player.hand_zone_id,
+        owner_id = v_player.player_id,
+        position = v_position
+      WHERE id = v_card.id;
+
+      v_cards_dealt := v_cards_dealt + 1;
+    END LOOP;
+  END LOOP;
+
+  -- Réorganiser les positions des cartes restantes dans le DECK
+  WITH remaining_cards AS (
+    SELECT id, ROW_NUMBER() OVER (ORDER BY position) - 1 as new_position
+    FROM game_cards
+    WHERE zone_id = v_deck_zone_id
+  )
+  UPDATE game_cards gc
+  SET position = rc.new_position
+  FROM remaining_cards rc
+  WHERE gc.id = rc.id;
+
+  RETURN v_cards_dealt;
+END;
+$$;
+
+COMMENT ON FUNCTION distribute_cards IS 'Distribue un nombre spécifique de cartes de la pioche à chaque joueur';
+
+-- ============================================================================
+
 -- Fonction: Calculer score automatique (P2 - SCO-02)
 CREATE OR REPLACE FUNCTION calculate_player_score(p_game_id UUID, p_player_id UUID)
 RETURNS INTEGER
