@@ -49,12 +49,12 @@ export default async function GamePage({ params }: GamePageProps) {
 
   // Map to GameBoard props
   const deckConfig = gameState.deck_config
-  const handZone = deckConfig.zones.find(z => z.type === 'HAND' && z.scope === 'PLAYER')
+  const handZone = deckConfig.zones.find(z => z.type === 'HAND') // v2: scope removed
   const deckZone = deckConfig.zones.find(z => z.type === 'DECK')
   const discardZone = deckConfig.zones.find(z => z.type === 'DISCARD' || z.type === 'PLAY_AREA')
 
   const myHand = gameState.cards
-    .filter(c => c.location === handZone?.id && c.owner_id === playerId)
+    .filter(c => c.zone_id === handZone?.id && c.owner_id === playerId)
     .sort((a: any, b: any) => a.position - b.position)
 
   return (

@@ -5,7 +5,7 @@ import { DeckConfig } from '@/types/engine.types';
 export async function fetchGameState(gameId: string): Promise<GameState> {
     const supabase = await createClient();
 
-    // 1. Fetch game and deck info
+    // 1. Fetch game and deck info (v2: zones are now per-game, not per-deck)
     const { data: game, error: gameError } = await supabase
         .from('games')
         .select(`
@@ -13,7 +13,6 @@ export async function fetchGameState(gameId: string): Promise<GameState> {
       decks (
         *,
         card_types (*),
-        zones (*),
         game_rules (*)
       )
     `)
@@ -26,7 +25,15 @@ export async function fetchGameState(gameId: string): Promise<GameState> {
 
     const deck = game.decks as any;
 
-    // 2. Map DeckConfig
+    // 2. v2: Fetch zones (now per-game, not per-deck)
+    const { data: zones, error: zonesError } = await supabase
+        .from('zones')
+        .select('*')
+        .eq('game_id', gameId);
+
+    if (zonesError) throw zonesError;
+
+    // 3. Map DeckConfig
     const deckConfig: DeckConfig = {
         game_mode: deck.game_mode,
         min_players: deck.min_players,
@@ -34,7 +41,7 @@ export async function fetchGameState(gameId: string): Promise<GameState> {
         settings: deck.settings,
         turn_structure: deck.turn_structure,
         card_types: deck.card_types,
-        zones: deck.zones,
+        zones: zones || [], // v2: zones are per-game
         rules: deck.game_rules.map((r: any) => ({
             id: r.id,
             name: r.name,
@@ -51,7 +58,7 @@ export async function fetchGameState(gameId: string): Promise<GameState> {
         victory_conditions: (game.victory_conditions as any) || []
     };
 
-    // 3. Fetch players
+    // 4. Fetch players
     const { data: players, error: playersError } = await supabase
         .from('game_players')
         .select('*')
@@ -67,10 +74,10 @@ export async function fetchGameState(gameId: string): Promise<GameState> {
         name: p.guest_name || 'Joueur',
         player_order: p.player_order,
         is_active: !p.has_left,
-        score: 0 // Placeholder for now
+        score: p.score // v2: score field now exists
     }));
 
-    // 4. Fetch cards
+    // 5. Fetch cards
     const { data: gameCards, error: cardsError } = await supabase
         .from('game_cards')
         .select(`
@@ -84,19 +91,26 @@ export async function fetchGameState(gameId: string): Promise<GameState> {
     const cardStates: any[] = (gameCards || []).map((c: any) => ({
         id: c.id,
         card_type_id: c.card_id,
-        location: c.location,
+        zone_id: c.zone_id, // v2: renamed from location
         owner_id: c.owner_user_id || c.owner_guest_session_id,
         position: c.position,
         image_url: (c.card as any)?.image_url || ''
     }));
+
+    // 6. v2: Fetch turn_state for current player
+    const { data: turnState } = await supabase
+        .from('turn_state')
+        .select('current_player_id')
+        .eq('game_id', gameId)
+        .single();
 
     return {
         game_id: gameId,
         deck_config: deckConfig,
         players: playerStates,
         cards: cardStates,
-        current_turn_player_id: game.current_turn_player_id || game.current_turn_guest_id,
-        current_phase_id: game.current_phase_id,
+        current_player_id: turnState?.current_player_id || null, // v2: from turn_state
+        current_phase_id: null, // v2: phase management removed, needs reimplementation
         status: game.status as any
     };
 }

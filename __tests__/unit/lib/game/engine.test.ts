@@ -36,7 +36,7 @@ describe('GameEngine', () => {
 
       it('should block DRAW_CARDS when no cards left in deck', () => {
         const emptyDeckState = createTestGameState({
-          cards: gameState.cards.filter(c => c.location !== 'deck-zone'),
+          cards: gameState.cards.filter(c => c.zone_id !== 'deck-zone'), // v2: renamed from location
         })
 
         const validation = engine.validateAction(emptyDeckState, {
@@ -200,7 +200,7 @@ describe('GameEngine', () => {
 
     it('should detect winner when player has empty hand (EMPTY_HAND condition)', () => {
       const stateWithEmptyHand = createTestGameState({
-        cards: gameState.cards.filter(c => !(c.location === 'hand-zone' && c.owner_id === 'user1')),
+        cards: gameState.cards.filter(c => !(c.zone_id === 'hand-zone' && c.owner_id === 'user1')), // v2: renamed from location
         deck_config: {
           ...gameState.deck_config,
           victory_conditions: [

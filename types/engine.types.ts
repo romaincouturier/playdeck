@@ -37,19 +37,25 @@ export type ZoneType = 'DECK' | 'HAND' | 'PLAY_AREA' | 'DISCARD' | 'SHARED' | 'P
 export type VisibilityType = 'PUBLIC' | 'PRIVATE' | 'OWNER_ONLY';
 export type PermissionType = 'ALL' | 'OWNER' | 'TURN_PLAYER' | 'NONE';
 
+// v2: Updated ZoneConfig to match v2 database schema
 export interface ZoneConfig {
     id: string;
+    game_id?: string; // v2: zones are now game-specific
     name: string;
-    type: ZoneType;
-    visibility: VisibilityType;
-    max_cards?: number;
-    min_cards?: number;
-    can_view: PermissionType;
-    can_draw: PermissionType;
-    can_play_to: PermissionType;
+    type: string; // v2: more flexible type system
+    visibility: string;
+    default_face: string; // v2: new field
     is_ordered: boolean;
-    shuffle_on_init: boolean;
-    scope: 'PLAYER' | 'GLOBAL';
+    max_capacity: number | null; // v2: renamed from max_cards
+    owner_player_id: string | null; // v2: replaces scope
+    is_enabled: boolean; // v2: new field
+    position_x?: number | null; // v2: layout properties
+    position_y?: number | null;
+    width?: number | null;
+    height?: number | null;
+    created_at?: string;
+    updated_at?: string;
+    // v1 fields removed: can_view, can_draw, can_play_to, shuffle_on_init, scope, min_cards
 }
 
 export type MechanicType =

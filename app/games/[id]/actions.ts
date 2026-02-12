@@ -30,7 +30,7 @@ export async function drawCard(gameId: string, guestSessionId?: string) {
 
   // 3. Execute action logic (find the card to draw)
   const deckZone = state.deck_config.zones.find(z => z.type === 'DECK')
-  const handZone = state.deck_config.zones.find(z => z.type === 'HAND' && z.scope === 'PLAYER')
+  const handZone = state.deck_config.zones.find(z => z.type === 'HAND') // v2: scope removed, zones have owner_player_id instead
 
   if (!deckZone || !handZone) {
     throw new Error('Configuration du deck invalide (zones manquantes)')

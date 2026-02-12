@@ -40,7 +40,7 @@ export function GameBoard({
   const router = useRouter()
   const supabase = createClient()
 
-  const currentTurnPlayerId = gameState.current_turn_player_id
+  const currentTurnPlayerId = gameState.current_player_id // v2: renamed from current_turn_player_id
   const players = gameState.players
   const deckConfig = gameState.deck_config
 
@@ -151,9 +151,9 @@ export function GameBoard({
   const deckZone = deckConfig.zones.find((z: any) => z.type === 'DECK')
   const discardZone = deckConfig.zones.find((z: any) => z.type === 'DISCARD' || z.type === 'PLAY_AREA')
 
-  const deckCards = gameState.cards.filter((c: any) => c.location === deckZone?.id)
+  const deckCards = gameState.cards.filter((c: any) => c.zone_id === deckZone?.id) // v2: renamed from location
   const discardCards = gameState.cards
-    .filter((c: any) => c.location === discardZone?.id)
+    .filter((c: any) => c.zone_id === discardZone?.id) // v2: renamed from location
     .sort((a: any, b: any) => b.position - a.position)
   const topDiscard = discardCards[0]
 

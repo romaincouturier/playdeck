@@ -13,7 +13,7 @@ export interface GamePlayerState {
 export interface GameCardState {
     id: string;
     card_type_id: string;
-    location: string; // zone_id
+    zone_id: string; // v2: renamed from location
     owner_id: string | null; // user_id or guest_session_id
     position: number;
 }
@@ -23,8 +23,8 @@ export interface GameState {
     deck_config: DeckConfig;
     players: GamePlayerState[];
     cards: GameCardState[];
-    current_turn_player_id: string | null;
-    current_phase_id: string;
+    current_player_id: string | null; // v2: from turn_state
+    current_phase_id: string | null; // v2: optional, may not exist
     status: 'waiting' | 'playing' | 'finished';
 }
 
@@ -43,8 +43,8 @@ export class GameEngine {
         }
 
         // 2. Turn checks
-        const isMyTurn = state.current_turn_player_id === playerId;
-        const currentPhase = this.config.turn_structure.phases.find(p => p.id === state.current_phase_id);
+        const isMyTurn = state.current_player_id === playerId;
+        const currentPhase = state.current_phase_id ? this.config.turn_structure.phases.find(p => p.id === state.current_phase_id) : null;
 
         if (!currentPhase) {
             return { valid: false, error: 'Phase de jeu invalide.' };
@@ -81,7 +81,7 @@ export class GameEngine {
         const deckZone = state.deck_config.zones.find(z => z.type === 'DECK');
         if (!deckZone) return { valid: false, error: 'Aucune pioche configurée.' };
 
-        const cardsInDeck = state.cards.filter(c => c.location === deckZone.id);
+        const cardsInDeck = state.cards.filter(c => c.zone_id === deckZone.id);
         if (cardsInDeck.length === 0) return { valid: false, error: 'La pioche est vide.' };
 
         return { valid: true };
@@ -94,24 +94,25 @@ export class GameEngine {
         if (!card) return { valid: false, error: 'Carte introuvable.' };
 
         // Check if card is in player's hand
-        const handZone = state.deck_config.zones.find(z => z.type === 'HAND' && z.scope === 'PLAYER');
-        if (!handZone || card.location !== handZone.id || card.owner_id !== playerId) {
+        const handZone = state.deck_config.zones.find(z => z.type === 'HAND'); // v2: scope removed
+        if (!handZone || card.zone_id !== handZone.id || card.owner_id !== playerId) {
             return { valid: false, error: 'La carte n\'est pas dans votre main.' };
         }
 
-        // Check target zone permissions
+        // Check target zone permissions (v2: simplified permission system)
         if (targetZoneId) {
             const targetZone = state.deck_config.zones.find(z => z.id === targetZoneId);
             if (!targetZone) return { valid: false, error: 'Zone cible invalide.' };
 
-            if (targetZone.can_play_to === 'TURN_PLAYER' && state.current_turn_player_id !== playerId) {
+            // v2: If zone has an owner, only that owner can play to it
+            if (targetZone.owner_player_id && targetZone.owner_player_id !== playerId) {
                 return { valid: false, error: 'Vous ne pouvez pas jouer dans cette zone.' };
             }
         }
 
         // For Planning Poker (COOPERATIVE), we allow changing the vote if it's the voting phase
         if (this.config.game_mode === 'COOPERATIVE' && state.current_phase_id === 'voting') {
-            const existingCardInZone = state.cards.find(c => c.location === targetZoneId && c.owner_id === playerId);
+            const existingCardInZone = state.cards.find(c => c.zone_id === targetZoneId && c.owner_id === playerId);
             if (existingCardInZone) {
                 // Technically valid to play another, but the server action should handle swapping
                 return { valid: true };
@@ -129,9 +130,9 @@ export class GameEngine {
             switch (condition.condition_type) {
                 case 'EMPTY_HAND':
                     const playerWithEmptyHand = state.players.find(p => {
-                        const handZone = state.deck_config.zones.find(z => z.type === 'HAND' && z.scope === 'PLAYER');
+                        const handZone = state.deck_config.zones.find(z => z.type === 'HAND'); // v2: scope removed
                         if (!handZone) return false;
-                        return !state.cards.some(c => c.location === handZone.id && c.owner_id === (p.user_id || p.guest_session_id));
+                        return !state.cards.some(c => c.zone_id === handZone.id && c.owner_id === (p.user_id || p.guest_session_id));
                     });
                     if (playerWithEmptyHand) return { winnerId: playerWithEmptyHand.id, reason: 'Main vide !' };
                     break;

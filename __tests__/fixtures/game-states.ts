@@ -25,36 +25,36 @@ export function createTestGameState(overrides?: Partial<GameState>): GameState {
         name: 'Deck',
         type: 'DECK',
         visibility: 'PRIVATE',
-        can_draw: 'ALL',
-        can_play_to: 'NONE',
-        can_view: 'NONE',
+        default_face: 'DOWN', // v2: new field
         is_ordered: true,
-        shuffle_on_init: true,
-        scope: 'GLOBAL',
+        max_capacity: null, // v2: renamed from max_cards
+        owner_player_id: null, // v2: global zone
+        is_enabled: true, // v2: new field
+        // v1 fields removed: can_draw, can_play_to, can_view, shuffle_on_init, scope
       },
       {
         id: 'hand-zone',
         name: 'Hand',
         type: 'HAND',
         visibility: 'OWNER_ONLY',
-        can_draw: 'OWNER',
-        can_play_to: 'OWNER',
-        can_view: 'OWNER',
+        default_face: 'UP', // v2: new field
         is_ordered: false,
-        shuffle_on_init: false,
-        scope: 'PLAYER',
+        max_capacity: null, // v2: unlimited
+        owner_player_id: 'user1', // v2: player-specific zone
+        is_enabled: true,
+        // v1 fields removed: can_draw, can_play_to, can_view, shuffle_on_init, scope
       },
       {
         id: 'discard-zone',
         name: 'Discard',
         type: 'DISCARD',
         visibility: 'PUBLIC',
-        can_draw: 'NONE',
-        can_play_to: 'ALL',
-        can_view: 'ALL',
+        default_face: 'UP', // v2: new field
         is_ordered: false,
-        shuffle_on_init: false,
-        scope: 'GLOBAL',
+        max_capacity: null,
+        owner_player_id: null, // v2: global zone
+        is_enabled: true,
+        // v1 fields removed: can_draw, can_play_to, can_view, shuffle_on_init, scope
       },
     ],
     rules: [],
@@ -87,7 +87,7 @@ export function createTestGameState(overrides?: Partial<GameState>): GameState {
   const defaultState: GameState = {
     game_id: 'test-game-123',
     status: 'playing',
-    current_turn_player_id: 'user1',
+    current_player_id: 'user1', // v2: renamed from current_turn_player_id
     current_phase_id: 'main',
     players: [
       {
@@ -110,13 +110,13 @@ export function createTestGameState(overrides?: Partial<GameState>): GameState {
       },
     ],
     cards: [
-      // Deck cards
-      { id: 'card1', card_type_id: 'type1', location: 'deck-zone', owner_id: null, position: 0 },
-      { id: 'card2', card_type_id: 'type1', location: 'deck-zone', owner_id: null, position: 1 },
-      { id: 'card3', card_type_id: 'type1', location: 'deck-zone', owner_id: null, position: 2 },
+      // Deck cards - v2: renamed location to zone_id
+      { id: 'card1', card_type_id: 'type1', zone_id: 'deck-zone', owner_id: null, position: 0 },
+      { id: 'card2', card_type_id: 'type1', zone_id: 'deck-zone', owner_id: null, position: 1 },
+      { id: 'card3', card_type_id: 'type1', zone_id: 'deck-zone', owner_id: null, position: 2 },
       // Player hands
-      { id: 'card4', card_type_id: 'type1', location: 'hand-zone', owner_id: 'user1', position: 0 },
-      { id: 'card5', card_type_id: 'type1', location: 'hand-zone', owner_id: 'user2', position: 0 },
+      { id: 'card4', card_type_id: 'type1', zone_id: 'hand-zone', owner_id: 'user1', position: 0 },
+      { id: 'card5', card_type_id: 'type1', zone_id: 'hand-zone', owner_id: 'user2', position: 0 },
     ],
     deck_config: defaultDeckConfig,
   }

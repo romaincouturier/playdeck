@@ -312,6 +312,69 @@ export interface Database {
         }
         Relationships: []
       }
+      game_master: {
+        Row: {
+          game_id: string
+          user_id: string
+          is_playing: boolean
+          omniscient_mode: boolean
+          can_undo: boolean
+          created_at: string
+        }
+        Insert: {
+          game_id: string
+          user_id: string
+          is_playing?: boolean
+          omniscient_mode?: boolean
+          can_undo?: boolean
+          created_at?: string
+        }
+        Update: {
+          game_id?: string
+          user_id?: string
+          is_playing?: boolean
+          omniscient_mode?: boolean
+          can_undo?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      turn_state: {
+        Row: {
+          game_id: string
+          current_player_id: string | null
+          turn_order: string[]
+          direction: string
+          turn_number: number
+          timer_seconds: number | null
+          timer_started_at: string | null
+          is_paused: boolean
+          updated_at: string
+        }
+        Insert: {
+          game_id: string
+          current_player_id?: string | null
+          turn_order?: string[]
+          direction?: string
+          turn_number?: number
+          timer_seconds?: number | null
+          timer_started_at?: string | null
+          is_paused?: boolean
+          updated_at?: string
+        }
+        Update: {
+          game_id?: string
+          current_player_id?: string | null
+          turn_order?: string[]
+          direction?: string
+          turn_number?: number
+          timer_seconds?: number | null
+          timer_started_at?: string | null
+          is_paused?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
