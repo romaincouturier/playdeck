@@ -185,24 +185,8 @@ BEGIN
 
   RAISE NOTICE 'Partie creee avec code TEST99';
 
-  -- Creer le Game Master
-  INSERT INTO game_master (
-    game_id,
-    user_id,
-    is_playing,
-    omniscient_mode,
-    can_undo,
-    created_at
-  ) VALUES (
-    v_game_id,
-    v_gm_user_id,
-    false,
-    true,
-    true,
-    NOW()
-  );
-
-  RAISE NOTICE 'Game Master cree';
+  -- Note: Pas de Game Master car user_id necessite un utilisateur dans auth.users
+  -- En production, le GM sera cree lors de l authentification du joueur
 
   -- Creer les zones par defaut via la fonction
   PERFORM create_default_zones(v_game_id);
