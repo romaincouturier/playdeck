@@ -829,6 +829,7 @@ CREATE POLICY "Game master can manage visibility overrides"
 -- ============================================================================
 
 -- Fonction: Créer zones par défaut pour une partie
+DROP FUNCTION IF EXISTS create_default_zones(UUID);
 CREATE OR REPLACE FUNCTION create_default_zones(p_game_id UUID)
 RETURNS void
 LANGUAGE plpgsql
@@ -854,6 +855,7 @@ COMMENT ON FUNCTION create_default_zones IS 'Crée les 3 zones par défaut (pioc
 -- ============================================================================
 
 -- Fonction: Créer zone HAND pour un joueur
+DROP FUNCTION IF EXISTS create_player_hand_zone(UUID, UUID, TEXT);
 CREATE OR REPLACE FUNCTION create_player_hand_zone(p_game_id UUID, p_player_id UUID, p_player_name TEXT)
 RETURNS UUID
 LANGUAGE plpgsql
@@ -875,6 +877,7 @@ COMMENT ON FUNCTION create_player_hand_zone IS 'Crée une zone HAND personnalis�
 -- ============================================================================
 
 -- Fonction: Obtenir le joueur suivant dans l'ordre
+DROP FUNCTION IF EXISTS get_next_player(UUID, UUID);
 CREATE OR REPLACE FUNCTION get_next_player(p_game_id UUID, p_current_player_id UUID)
 RETURNS UUID
 LANGUAGE plpgsql
@@ -931,6 +934,7 @@ COMMENT ON FUNCTION get_next_player IS 'Calcule le prochain joueur dans l''ordre
 -- ============================================================================
 
 -- Fonction: Initialiser turn_state pour une partie
+DROP FUNCTION IF EXISTS initialize_turn_state(UUID);
 CREATE OR REPLACE FUNCTION initialize_turn_state(p_game_id UUID)
 RETURNS void
 LANGUAGE plpgsql
@@ -1047,6 +1051,8 @@ CREATE TRIGGER update_game_rules_updated_at
 -- ============================================================================
 
 -- Fonction: Recycler défausse dans pioche (P1 - DEF-04)
+DROP FUNCTION IF EXISTS recycle_discard_to_deck(UUID, BOOLEAN);
+DROP FUNCTION IF EXISTS recycle_discard_to_deck(UUID);
 CREATE OR REPLACE FUNCTION recycle_discard_to_deck(p_game_id UUID, p_shuffle BOOLEAN DEFAULT true)
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -1088,6 +1094,7 @@ COMMENT ON FUNCTION recycle_discard_to_deck IS 'Déplace toutes les cartes de la
 -- ============================================================================
 
 -- Fonction: Distribuer des cartes aux joueurs
+DROP FUNCTION IF EXISTS distribute_cards(UUID, INTEGER);
 CREATE OR REPLACE FUNCTION distribute_cards(p_game_id UUID, p_cards_per_player INTEGER)
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -1166,6 +1173,7 @@ COMMENT ON FUNCTION distribute_cards IS 'Distribue un nombre spécifique de cart
 -- ============================================================================
 
 -- Fonction: Calculer score automatique (P2 - SCO-02)
+DROP FUNCTION IF EXISTS calculate_player_score(UUID, UUID);
 CREATE OR REPLACE FUNCTION calculate_player_score(p_game_id UUID, p_player_id UUID)
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -1201,6 +1209,7 @@ COMMENT ON FUNCTION calculate_player_score IS 'Calcule automatiquement le score 
 -- ============================================================================
 
 -- Fonction: Créer snapshot de partie (P2 - PAR-07)
+DROP FUNCTION IF EXISTS create_game_snapshot(UUID);
 CREATE OR REPLACE FUNCTION create_game_snapshot(p_game_id UUID)
 RETURNS UUID
 LANGUAGE plpgsql
