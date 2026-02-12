@@ -41,14 +41,14 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
     redirect('/decks')
   }
 
-  // Get raw game data for host_id if not in GameState
+  // v2: Get raw game data for game_master_id if not in GameState
   const { data: game } = await supabase
     .from('games')
-    .select('host_id, code')
+    .select('game_master_id, code')
     .eq('id', id)
     .single()
 
-  const isHost = user ? game?.host_id === user.id : false
+  const isHost = user ? game?.game_master_id === user.id : false
   const activePlayers = gameState.players.filter(p => p.is_active).length
 
   return (
