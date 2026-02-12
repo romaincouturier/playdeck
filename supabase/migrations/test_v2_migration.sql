@@ -167,6 +167,7 @@ BEGIN
   -- Creer la partie
   INSERT INTO games (
     id,
+    host_id,
     code,
     status,
     game_master_id,
@@ -176,6 +177,7 @@ BEGIN
     created_at
   ) VALUES (
     v_game_id,
+    v_gm_user_id,
     'TEST99',
     'waiting',
     v_gm_user_id,
