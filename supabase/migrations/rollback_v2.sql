@@ -88,14 +88,26 @@ DROP TABLE IF EXISTS game_master CASCADE;
 SELECT '✓ Tables v2 supprimées' as status;
 
 -- ============================================================================
--- 6. RESTAURER CONTRAINTE deck_id NOT NULL (si nécessaire)
+-- 6. SUPPRIMER LES POLICIES RLS V2 (avant suppression colonnes)
+-- ============================================================================
+
+-- Policies sur games (dépendent de game_master_id)
+DROP POLICY IF EXISTS "Players can view games they participate in" ON games;
+DROP POLICY IF EXISTS "Game master can create games" ON games;
+DROP POLICY IF EXISTS "Game master can update own games" ON games;
+DROP POLICY IF EXISTS "Game master can delete own games" ON games;
+
+SELECT '✓ Policies RLS v2 supprimées' as status;
+
+-- ============================================================================
+-- 7. RESTAURER CONTRAINTE deck_id NOT NULL (si nécessaire)
 -- ============================================================================
 
 -- Remettre deck_id en NOT NULL si vous voulez revenir à v1
 -- ALTER TABLE games ALTER COLUMN deck_id SET NOT NULL;
 
 -- ============================================================================
--- 7. SUPPRIMER COLONNES V2 DES TABLES EXISTANTES
+-- 8. SUPPRIMER COLONNES V2 DES TABLES EXISTANTES
 -- ============================================================================
 
 -- games: supprimer colonnes v2
@@ -130,7 +142,7 @@ ALTER TABLE cards
 SELECT '✓ Colonnes v2 supprimées des tables existantes' as status;
 
 -- ============================================================================
--- 8. RESTAURER COLONNES V1 (optionnel - commenté par défaut)
+-- 9. RESTAURER COLONNES V1 (optionnel - commenté par défaut)
 -- ============================================================================
 
 -- Restaurer colonne host_id (si vous voulez revenir à v1)
