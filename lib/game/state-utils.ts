@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { GameState, GamePlayerState, GameCardState } from './engine';
-import { DeckConfig } from '@/types/engine.types';
+import { DeckConfig, GameMode } from '@/types/engine.types';
 
 export async function fetchGameState(gameId: string): Promise<GameState> {
     const supabase = await createClient();
@@ -36,7 +36,7 @@ export async function fetchGameState(gameId: string): Promise<GameState> {
 
     // 3. Map DeckConfig
     const deckConfig: DeckConfig = {
-        game_mode: game.game_mode || 'UNIVERSAL', // v2: game_mode is on games table, not decks
+        game_mode: (game.game_mode || 'UNIVERSAL') as GameMode, // v2: game_mode is on games table, not decks
         min_players: deck?.min_players || 2,
         max_players: game.max_players || 6,
         settings: deck?.settings || {},
