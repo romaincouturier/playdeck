@@ -8,9 +8,9 @@ Quand l'hôte démarre la partie :
 ❌ Le plateau de jeu s'affiche mais VIDE (aucune carte)
 ```
 
-**Cause** : La table `game_cards` est vide au démarrage !
+**2 causes** :
 
-### Pourquoi ?
+### Cause 1 : Aucune carte dans game_cards
 
 1. `startGame()` met à jour `games.status = 'playing'`
 2. Trigger `on_game_start_create_zones` se déclenche :
@@ -21,6 +21,19 @@ Quand l'hôte démarre la partie :
 4. → Échec !
 
 **Il manquait l'étape d'initialisation des cartes.**
+
+### Cause 2 : Aucune zone HAND pour les joueurs
+
+1. Les joueurs rejoignent le lobby quand `status = 'waiting'`
+2. Le trigger `trigger_create_player_hand` vérifie :
+   ```sql
+   IF v_game_status = 'playing' AND NEW.role = 'PLAYER' THEN
+   ```
+3. ❌ Condition **fausse** pendant le lobby → **pas de zone HAND créée**
+4. Quand la partie démarre, `distribute_cards()` cherche les zones HAND
+5. ❌ **Aucune zone HAND trouvée** → Échec !
+
+**Il manquait la création des zones HAND au démarrage.**
 
 ---
 
@@ -56,12 +69,17 @@ initialize_game_cards(game_id) :
 **Nouveau flow quand `games.status = 'playing'`** :
 ```
 Trigger on_game_start_create_zones :
-  1. create_default_zones(game_id)     ← Crée DECK, CENTER, DISCARD
-  2. initialize_game_cards(game_id)    ← 🆕 Remplit le DECK avec les cartes
-  3. initialize_turn_state(game_id)    ← Configure les tours
+  1. create_default_zones(game_id)       ← Crée DECK, CENTER, DISCARD
+  2. Boucle sur tous les joueurs:        ← 🆕 Crée les zones HAND
+       create_player_hand_zone()
+  3. initialize_game_cards(game_id)      ← 🆕 Remplit le DECK avec les cartes
+  4. initialize_turn_state(game_id)      ← Configure les tours
 ```
 
-Maintenant `distribute_cards()` a des cartes à distribuer ! 🎉
+**Maintenant** :
+- ✅ Toutes les zones existent (DECK, CENTER, DISCARD, HAND x joueurs)
+- ✅ Le DECK contient les cartes
+- ✅ `distribute_cards()` peut distribuer ! 🎉
 
 ---
 
@@ -77,9 +95,10 @@ INITIALIZE_GAME_CARDS ADDED
 
 Flow when game starts:
   1. Create zones (DECK, CENTER, DISCARD)
-  2. Initialize game_cards from deck → DECK zone
-  3. Initialize turn_state
-  4. distribute_cards can now work!
+  2. Create HAND zones for all existing players
+  3. Initialize game_cards from deck → DECK zone
+  4. Initialize turn_state
+  5. distribute_cards can now work!
 
 🎉 Card distribution should work now!
 ```
