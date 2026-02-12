@@ -209,11 +209,12 @@ BEGIN
   RAISE NOTICE 'Zone CENTER: %', v_zone_center_id;
   RAISE NOTICE 'Zone DISCARD: %', v_zone_discard_id;
 
-  -- Creer 2 joueurs
+  -- Creer 2 joueurs (en tant qu'invités pour le test)
   INSERT INTO game_players (
     id,
     game_id,
     user_id,
+    guest_session_id,
     role,
     score,
     player_order
@@ -222,6 +223,7 @@ BEGIN
     v_player1_id,
     v_game_id,
     NULL,
+    'guest-test-player-1',
     'PLAYER',
     0,
     1
@@ -230,6 +232,7 @@ BEGIN
     v_player2_id,
     v_game_id,
     NULL,
+    'guest-test-player-2',
     'PLAYER',
     0,
     2
