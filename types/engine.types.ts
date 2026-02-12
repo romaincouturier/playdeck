@@ -1,4 +1,5 @@
 export type GameMode =
+    | 'UNIVERSAL'     // v2: Default mode for flexible game engine
     | 'COMPETITIVE'
     | 'COOPERATIVE'
     | 'TEAM_BASED'
