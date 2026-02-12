@@ -1,7 +1,7 @@
 {
     "login": {
         "welcome": "La aventura comienza aquí.",
-        "member_area": "Área de Miembros",
+        "member_area": "Área de miembros",
         "signup_title": "Crear una cuenta",
         "signup_desc": "Crea tu cuenta para gestionar tus barajas",
         "login_desc": "Accede a tu colección de cartas",
@@ -45,8 +45,8 @@
     "common": {
         "logout": "Cerrar sesión",
         "home": "Inicio",
-        "decks": "Mis Barajas",
-        "games": "Mis Partidas",
+        "decks": "Mis barajas",
+        "games": "Mis partidas",
         "join": "Unirse",
         "create": "Crear partida",
         "settings": "Configuración",
@@ -56,11 +56,11 @@
         "not_found": "Partida no encontrada"
     },
     "decks": {
-        "title": "Mis Colecciones",
+        "title": "Mis colecciones",
         "subtitle": "Gestiona tus barajas de cartas y crea otras nuevas",
         "empty": "No hay barajas por ahora",
         "empty_desc": "Empieza creando tu primera baraja de cartas",
-        "create_new": "Nueva Baraja",
+        "create_new": "Nueva baraja",
         "copy": "copia",
         "delete_confirm": "¿Estás seguro de que quieres eliminar esta baraja?",
         "duplicate": "Duplicar",

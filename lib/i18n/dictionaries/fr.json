@@ -1,7 +1,7 @@
 {
     "login": {
         "welcome": "L'aventure commence ici.",
-        "member_area": "Espace Membre",
+        "member_area": "Espace membre",
         "signup_title": "Créer un compte",
         "signup_desc": "Créez votre compte pour gérer vos decks",
         "login_desc": "Accédez à votre collection de cartes",
@@ -45,8 +45,8 @@
     "common": {
         "logout": "Déconnexion",
         "home": "Accueil",
-        "decks": "Mes Decks",
-        "games": "Mes Parties",
+        "decks": "Mes decks",
+        "games": "Mes parties",
         "join": "Rejoindre",
         "create": "Créer une partie",
         "settings": "Paramètres",
