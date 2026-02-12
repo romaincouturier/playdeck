@@ -261,7 +261,7 @@ export async function revealAll(gameId: string) {
     .single()
 
   if (!game || game.game_master_id !== user.id) {
-    throw new Error('Seul le Game Master peut révéler les votes')
+    throw new Error('Seul le Game Master peut effectuer cette action')
   }
 
   // 3. v2: Phase management removed - this action may need to be reimplemented

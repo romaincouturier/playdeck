@@ -264,15 +264,16 @@ export function GameBoard({
               <div className="aspect-[2/3] relative">
                 {topDiscard ? (
                   <Card className="absolute inset-0 overflow-hidden">
-                    {gameState.current_phase_id === 'reveal' ? (
+                    {/* Display card based on zone visibility - PUBLIC zones show cards face up */}
+                    {discardZone?.visibility === 'PUBLIC' || discardZone?.default_face === 'UP' ? (
                       <CardImage
                         src={(topDiscard as any).image_url}
-                        alt="Carte défaussée"
+                        alt="Carte"
                         position={0}
                       />
                     ) : (
-                      <div className="absolute inset-0 bg-st-anthracite flex items-center justify-center border-2 border-primary">
-                        <span className="text-primary font-bold">VOTE</span>
+                      <div className="absolute inset-0 bg-gradient-to-br from-st-yellow to-st-anthracite flex items-center justify-center border-2 border-st-yellow">
+                        <div className="text-st-anthracite text-4xl font-bold">?</div>
                       </div>
                     )}
                   </Card>
@@ -285,11 +286,6 @@ export function GameBoard({
               <div className="text-center text-sm text-muted-foreground">
                 {discardCards.length} carte(s)
               </div>
-              {isHost && gameState.current_phase_id === 'voting' && discardCards.length > 0 && (
-                <Button onClick={handleRevealAll} className="w-full mt-2" disabled={loading}>
-                  Révéler les votes
-                </Button>
-              )}
             </div>
           </div>
 

@@ -67,7 +67,11 @@ export class GameEngine {
             case 'PLAY_CARD':
                 return this.validatePlayAction(state, playerId, payload?.cardId, payload?.targetZoneId);
             case 'PASS_TURN':
-                return { valid: isMyTurn || this.config.game_mode === 'COOPERATIVE', error: isMyTurn || this.config.game_mode === 'COOPERATIVE' ? undefined : 'Ce n\'est pas votre tour.' };
+                // For TURN_BASED games, only the current player can pass
+                if (this.config.game_mode === 'TURN_BASED' && !isMyTurn) {
+                    return { valid: false, error: 'Ce n\'est pas votre tour.' };
+                }
+                return { valid: true };
             case 'REVEAL_ALL':
                 // Only host can reveal usually, but we check if action is allowed in phase
                 return { valid: true }; // Server action will check if player is host
@@ -107,15 +111,6 @@ export class GameEngine {
             // v2: If zone has an owner, only that owner can play to it
             if (targetZone.owner_player_id && targetZone.owner_player_id !== playerId) {
                 return { valid: false, error: 'Vous ne pouvez pas jouer dans cette zone.' };
-            }
-        }
-
-        // For Planning Poker (COOPERATIVE), we allow changing the vote if it's the voting phase
-        if (this.config.game_mode === 'COOPERATIVE' && state.current_phase_id === 'voting') {
-            const existingCardInZone = state.cards.find(c => c.zone_id === targetZoneId && c.owner_id === playerId);
-            if (existingCardInZone) {
-                // Technically valid to play another, but the server action should handle swapping
-                return { valid: true };
             }
         }
 
