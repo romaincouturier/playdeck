@@ -540,15 +540,27 @@ BEGIN
 END $$;
 
 -- Convertir zone_id de TEXT vers UUID si nécessaire (après rename de location)
+-- Gère aussi la contrainte NOT NULL qui peut exister
 DO $$
 DECLARE
   current_type text;
+  was_not_null boolean;
 BEGIN
   SELECT data_type INTO current_type
   FROM information_schema.columns
   WHERE table_name = 'game_cards' AND column_name = 'zone_id';
 
   IF current_type = 'text' OR current_type = 'character varying' THEN
+    -- Vérifier si la colonne avait NOT NULL
+    SELECT is_nullable = 'NO' INTO was_not_null
+    FROM information_schema.columns
+    WHERE table_name = 'game_cards' AND column_name = 'zone_id';
+
+    -- Supprimer temporairement NOT NULL si elle existe
+    IF was_not_null THEN
+      ALTER TABLE game_cards ALTER COLUMN zone_id DROP NOT NULL;
+    END IF;
+
     -- Supprimer les valeurs qui ne sont pas des UUID valides
     UPDATE game_cards
     SET zone_id = NULL
@@ -558,6 +570,8 @@ BEGIN
     -- Convertir la colonne en UUID
     ALTER TABLE game_cards
     ALTER COLUMN zone_id TYPE UUID USING zone_id::uuid;
+
+    -- Note: On ne remet PAS NOT NULL car les cartes peuvent temporairement ne pas avoir de zone
   END IF;
 END $$;
 
