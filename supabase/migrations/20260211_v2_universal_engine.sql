@@ -44,9 +44,9 @@ CREATE POLICY "Game master can update own games"
 -- ============================================================================
 
 -- Table: zones - Zones dynamiques de jeu (REFONTE COMPLÈTE)
-DROP TABLE IF EXISTS zones CASCADE;
-
-CREATE TABLE zones (
+-- IMPORTANT: Ne pas supprimer la table zones si elle existe déjà
+-- La structure v2 est compatible, les données existantes sont préservées
+CREATE TABLE IF NOT EXISTS zones (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -83,6 +83,7 @@ COMMENT ON COLUMN zones.owner_player_id IS 'NULL = zone globale, sinon zone d''u
 CREATE INDEX IF NOT EXISTS idx_zones_game ON zones(game_id);
 CREATE INDEX IF NOT EXISTS idx_zones_type ON zones(game_id, type);
 CREATE INDEX IF NOT EXISTS idx_zones_owner ON zones(owner_player_id);
+CREATE INDEX IF NOT EXISTS idx_zones_enabled ON zones(game_id) WHERE is_enabled = true;
 
 -- RLS
 ALTER TABLE zones ENABLE ROW LEVEL SECURITY;
@@ -230,6 +231,7 @@ COMMENT ON COLUMN primitive_actions.can_be_undone IS 'Si false, action ne peut p
 CREATE INDEX IF NOT EXISTS idx_primitive_actions_game ON primitive_actions(game_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_primitive_actions_actor ON primitive_actions(actor_id);
 CREATE INDEX IF NOT EXISTS idx_primitive_actions_type ON primitive_actions(game_id, action_type);
+CREATE INDEX IF NOT EXISTS idx_primitive_actions_undone ON primitive_actions(game_id) WHERE undone_at IS NULL;
 
 -- RLS
 ALTER TABLE primitive_actions ENABLE ROW LEVEL SECURITY;
@@ -513,6 +515,7 @@ COMMENT ON COLUMN game_cards.group_id IS 'ID du groupe si carte fait partie d''u
 CREATE INDEX IF NOT EXISTS idx_game_cards_zone ON game_cards(zone_id);
 CREATE INDEX IF NOT EXISTS idx_game_cards_owner ON game_cards(owner_id);
 CREATE INDEX IF NOT EXISTS idx_game_cards_group ON game_cards(group_id);
+CREATE INDEX IF NOT EXISTS idx_game_cards_visible ON game_cards(game_id, face_visible);
 
 -- ============================================================================
 
