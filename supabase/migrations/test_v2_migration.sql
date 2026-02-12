@@ -161,8 +161,20 @@ BEGIN
   RAISE NOTICE 'Game ID: %', v_game_id;
   RAISE NOTICE 'GM User ID: %', v_gm_user_id;
 
-  -- Creer un deck minimal (on skip la table decks pour ce test)
-  -- En production, il faudrait creer le deck d abord
+  -- Creer un deck minimal pour le test
+  INSERT INTO decks (
+    id,
+    user_id,
+    name,
+    is_default
+  ) VALUES (
+    v_deck_id,
+    v_gm_user_id,
+    'Test Deck for TEST99',
+    false
+  );
+
+  RAISE NOTICE 'Deck cree: %', v_deck_id;
 
   -- Creer la partie
   INSERT INTO games (
@@ -269,12 +281,43 @@ BEGIN
   RAISE NOTICE 'Zone HAND Joueur 1: %', v_zone_hand1_id;
   RAISE NOTICE 'Zone HAND Joueur 2: %', v_zone_hand2_id;
 
-  -- Creer quelques cartes dans le deck
-  -- Note: En production, les cartes viendraient de la table cards liee au deck
-  -- Pour ce test, on simule 3 cartes
+  -- Creer 3 cartes de base dans la table cards
+  INSERT INTO cards (
+    id,
+    deck_id,
+    value,
+    suit,
+    numeric_values
+  ) VALUES
+  (
+    v_card1_id,
+    v_deck_id,
+    'As',
+    'Coeur',
+    '{"value": 1, "points": 11}'::jsonb
+  ),
+  (
+    v_card2_id,
+    v_deck_id,
+    'Roi',
+    'Pique',
+    '{"value": 13, "points": 10}'::jsonb
+  ),
+  (
+    v_card3_id,
+    v_deck_id,
+    'Dame',
+    'Carreau',
+    '{"value": 12, "points": 10}'::jsonb
+  );
+
+  RAISE NOTICE '3 cartes creees dans la table cards';
+
+  -- Creer les cartes de jeu dans la partie
   INSERT INTO game_cards (
     id,
     game_id,
+    card_id,
     zone_id,
     card_position,
     is_face_up,
@@ -282,8 +325,9 @@ BEGIN
     updated_at
   ) VALUES
   (
-    v_card1_id,
+    gen_random_uuid(),
     v_game_id,
+    v_card1_id,
     v_zone_deck_id,
     1,
     false,
@@ -291,8 +335,9 @@ BEGIN
     NOW()
   ),
   (
-    v_card2_id,
+    gen_random_uuid(),
     v_game_id,
+    v_card2_id,
     v_zone_deck_id,
     2,
     false,
@@ -300,8 +345,9 @@ BEGIN
     NOW()
   ),
   (
-    v_card3_id,
+    gen_random_uuid(),
     v_game_id,
+    v_card3_id,
     v_zone_deck_id,
     3,
     false,
@@ -309,7 +355,7 @@ BEGIN
     NOW()
   );
 
-  RAISE NOTICE 'Cartes creees dans le deck';
+  RAISE NOTICE 'Cartes de jeu creees dans le deck';
 
   -- Initialiser le turn state
   PERFORM initialize_turn_state(v_game_id);
