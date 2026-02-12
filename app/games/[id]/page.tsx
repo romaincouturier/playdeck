@@ -47,6 +47,15 @@ export default async function GamePage({ params }: GamePageProps) {
     redirect('/decks')
   }
 
+  // v2: Vérifier si l'utilisateur est Game Master
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', id)
+    .single()
+
+  const isGameMaster = user ? game?.game_master_id === user.id : false
+
   // Map to GameBoard props
   const deckConfig = gameState.deck_config
   const handZone = deckConfig.zones.find(z => z.type === 'HAND') // v2: scope removed
@@ -65,6 +74,7 @@ export default async function GamePage({ params }: GamePageProps) {
         gameState={gameState}
         playerId={playerId}
         isGuest={isGuest}
+        isGameMaster={isGameMaster}
         hand={myHand.map((c: any) => ({
           id: c.id,
           position: c.position,
