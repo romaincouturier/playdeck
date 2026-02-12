@@ -23,6 +23,7 @@ export async function fetchGameState(gameId: string): Promise<GameState> {
         throw new Error('Partie introuvable');
     }
 
+    // v2: deck_id can be null (games without predefined deck)
     const deck = game.decks as any;
 
     // 2. v2: Fetch zones (now per-game, not per-deck)
@@ -35,14 +36,14 @@ export async function fetchGameState(gameId: string): Promise<GameState> {
 
     // 3. Map DeckConfig
     const deckConfig: DeckConfig = {
-        game_mode: deck.game_mode,
-        min_players: deck.min_players,
-        max_players: game.max_players,
-        settings: deck.settings,
-        turn_structure: deck.turn_structure,
-        card_types: deck.card_types,
+        game_mode: game.game_mode || 'UNIVERSAL', // v2: game_mode is on games table, not decks
+        min_players: deck?.min_players || 2,
+        max_players: game.max_players || 6,
+        settings: deck?.settings || {},
+        turn_structure: deck?.turn_structure || { type: 'FREE', phases: [] },
+        card_types: deck?.card_types || [],
         zones: zones || [], // v2: zones are per-game
-        rules: deck.game_rules.map((r: any) => ({
+        rules: deck?.game_rules?.map((r: any) => ({
             id: r.id,
             name: r.name,
             mechanic_type: r.mechanic_type,
@@ -54,7 +55,7 @@ export async function fetchGameState(gameId: string): Promise<GameState> {
                 action: r.action_type,
                 parameters: r.action_parameters
             }
-        })),
+        })) || [],
         victory_conditions: (game.victory_conditions as any) || []
     };
 
@@ -92,7 +93,7 @@ export async function fetchGameState(gameId: string): Promise<GameState> {
         id: c.id,
         card_type_id: c.card_id,
         zone_id: c.zone_id, // v2: renamed from location
-        owner_id: c.owner_user_id || c.owner_guest_session_id,
+        owner_id: c.owner_id, // v2: unified column (references game_players.id)
         position: c.position,
         image_url: (c.card as any)?.image_url || ''
     }));
