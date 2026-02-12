@@ -22,7 +22,7 @@
         "check_email": "¡Revisa tu correo para confirmar tu registro!",
         "error_occurred": "Ha ocurrido un error",
         "forgot_password": "¿Olvidaste tu contraseña?",
-        "reset_password_title": "Restablecer Contraseña",
+        "reset_password_title": "Restablecer contraseña",
         "reset_password_desc": "Introduce tu correo para recibir un enlace de restablecimiento",
         "send_reset_link": "Enviar enlace",
         "reset_email_sent": "¡Correo enviado! Revisa tu bandeja de entrada.",
