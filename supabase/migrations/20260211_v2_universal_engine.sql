@@ -26,14 +26,17 @@ CREATE INDEX IF NOT EXISTS idx_game_master_user ON game_master(user_id);
 -- RLS
 ALTER TABLE game_master ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Game master can view own games" ON game_master;
 CREATE POLICY "Game master can view own games"
   ON game_master FOR SELECT
   USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Game master can insert own games" ON game_master;
 CREATE POLICY "Game master can insert own games"
   ON game_master FOR INSERT
   WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Game master can update own games" ON game_master;
 CREATE POLICY "Game master can update own games"
   ON game_master FOR UPDATE
   USING (user_id = auth.uid());
@@ -84,6 +87,7 @@ CREATE INDEX IF NOT EXISTS idx_zones_owner ON zones(owner_player_id);
 -- RLS
 ALTER TABLE zones ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Players can view zones in their games" ON zones;
 CREATE POLICY "Players can view zones in their games"
   ON zones FOR SELECT
   USING (
@@ -94,6 +98,7 @@ CREATE POLICY "Players can view zones in their games"
     )
   );
 
+DROP POLICY IF EXISTS "Game master can manage zones" ON zones;
 CREATE POLICY "Game master can manage zones"
   ON zones FOR ALL
   USING (
@@ -124,6 +129,7 @@ CREATE INDEX IF NOT EXISTS idx_card_categories_deck ON card_categories(deck_id);
 -- RLS
 ALTER TABLE card_categories ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view categories in own decks" ON card_categories;
 CREATE POLICY "Users can view categories in own decks"
   ON card_categories FOR SELECT
   USING (
@@ -134,6 +140,7 @@ CREATE POLICY "Users can view categories in own decks"
     )
   );
 
+DROP POLICY IF EXISTS "Users can manage categories in own decks" ON card_categories;
 CREATE POLICY "Users can manage categories in own decks"
   ON card_categories FOR ALL
   USING (
@@ -163,6 +170,7 @@ CREATE INDEX IF NOT EXISTS idx_card_category_category ON card_category_membershi
 -- RLS
 ALTER TABLE card_category_membership ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view category membership for own decks" ON card_category_membership;
 CREATE POLICY "Users can view category membership for own decks"
   ON card_category_membership FOR SELECT
   USING (
@@ -174,6 +182,7 @@ CREATE POLICY "Users can view category membership for own decks"
     )
   );
 
+DROP POLICY IF EXISTS "Users can manage category membership for own decks" ON card_category_membership;
 CREATE POLICY "Users can manage category membership for own decks"
   ON card_category_membership FOR ALL
   USING (
@@ -225,6 +234,7 @@ CREATE INDEX IF NOT EXISTS idx_primitive_actions_type ON primitive_actions(game_
 -- RLS
 ALTER TABLE primitive_actions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Players can view actions in their games" ON primitive_actions;
 CREATE POLICY "Players can view actions in their games"
   ON primitive_actions FOR SELECT
   USING (
@@ -235,6 +245,7 @@ CREATE POLICY "Players can view actions in their games"
     )
   );
 
+DROP POLICY IF EXISTS "Players and GM can insert actions" ON primitive_actions;
 CREATE POLICY "Players and GM can insert actions"
   ON primitive_actions FOR INSERT
   WITH CHECK (
@@ -262,6 +273,7 @@ COMMENT ON COLUMN game_rules_text.predefined_game_id IS 'ID du jeu prédéfini s
 -- RLS
 ALTER TABLE game_rules_text ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Players can view rules in their games" ON game_rules_text;
 CREATE POLICY "Players can view rules in their games"
   ON game_rules_text FOR SELECT
   USING (
@@ -272,6 +284,7 @@ CREATE POLICY "Players can view rules in their games"
     )
   );
 
+DROP POLICY IF EXISTS "Game master can manage rules" ON game_rules_text;
 CREATE POLICY "Game master can manage rules"
   ON game_rules_text FOR ALL
   USING (
@@ -307,6 +320,7 @@ CREATE INDEX IF NOT EXISTS idx_turn_state_current_player ON turn_state(current_p
 -- RLS
 ALTER TABLE turn_state ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Players can view turn state in their games" ON turn_state;
 CREATE POLICY "Players can view turn state in their games"
   ON turn_state FOR SELECT
   USING (
@@ -317,6 +331,7 @@ CREATE POLICY "Players can view turn state in their games"
     )
   );
 
+DROP POLICY IF EXISTS "Game master can manage turn state" ON turn_state;
 CREATE POLICY "Game master can manage turn state"
   ON turn_state FOR ALL
   USING (
@@ -350,6 +365,7 @@ CREATE INDEX IF NOT EXISTS idx_card_groups_owner ON card_groups(owner_player_id)
 -- RLS
 ALTER TABLE card_groups ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Players can view groups in their games" ON card_groups;
 CREATE POLICY "Players can view groups in their games"
   ON card_groups FOR SELECT
   USING (
@@ -360,6 +376,7 @@ CREATE POLICY "Players can view groups in their games"
     )
   );
 
+DROP POLICY IF EXISTS "Players can manage own groups" ON card_groups;
 CREATE POLICY "Players can manage own groups"
   ON card_groups FOR ALL
   USING (
@@ -465,6 +482,7 @@ CREATE INDEX IF NOT EXISTS idx_card_marks_card ON card_marks(game_id, card_id);
 -- RLS
 ALTER TABLE card_marks ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Players can view marks in their games" ON card_marks;
 CREATE POLICY "Players can view marks in their games"
   ON card_marks FOR SELECT
   USING (
@@ -475,6 +493,7 @@ CREATE POLICY "Players can view marks in their games"
     )
   );
 
+DROP POLICY IF EXISTS "Game master can manage marks" ON card_marks;
 CREATE POLICY "Game master can manage marks"
   ON card_marks FOR ALL
   USING (
@@ -507,6 +526,7 @@ CREATE INDEX IF NOT EXISTS idx_game_snapshots_game ON game_snapshots(game_id, cr
 -- RLS
 ALTER TABLE game_snapshots ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Game master can manage snapshots" ON game_snapshots;
 CREATE POLICY "Game master can manage snapshots"
   ON game_snapshots FOR ALL
   USING (
@@ -545,14 +565,17 @@ CREATE INDEX IF NOT EXISTS idx_predefined_games_creator ON predefined_games(crea
 -- RLS
 ALTER TABLE predefined_games ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public games are viewable by all" ON predefined_games;
 CREATE POLICY "Public games are viewable by all"
   ON predefined_games FOR SELECT
   USING (is_public = true OR created_by = auth.uid());
 
+DROP POLICY IF EXISTS "Users can create predefined games" ON predefined_games;
 CREATE POLICY "Users can create predefined games"
   ON predefined_games FOR INSERT
   WITH CHECK (created_by = auth.uid());
 
+DROP POLICY IF EXISTS "Users can update own predefined games" ON predefined_games;
 CREATE POLICY "Users can update own predefined games"
   ON predefined_games FOR UPDATE
   USING (created_by = auth.uid());
@@ -583,6 +606,7 @@ CREATE INDEX IF NOT EXISTS idx_visibility_overrides_viewer ON player_visibility_
 -- RLS
 ALTER TABLE player_visibility_overrides ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Players can view own visibility overrides" ON player_visibility_overrides;
 CREATE POLICY "Players can view own visibility overrides"
   ON player_visibility_overrides FOR SELECT
   USING (
@@ -593,6 +617,7 @@ CREATE POLICY "Players can view own visibility overrides"
     )
   );
 
+DROP POLICY IF EXISTS "Game master can manage visibility overrides" ON player_visibility_overrides;
 CREATE POLICY "Game master can manage visibility overrides"
   ON player_visibility_overrides FOR ALL
   USING (

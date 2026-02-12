@@ -19,9 +19,13 @@ Ce dossier contient les scripts de migration pour le moteur universel v2 de Play
 - 📊 Données seed (2 jeux prédéfinis : Bataille, Uno)
 
 **Caractéristiques** :
-- ✅ Idempotente : peut être réexécutée sans erreur (`IF NOT EXISTS`, `IF EXISTS`)
+- ✅ Idempotente : peut être réexécutée sans erreur
+  - Tables : `CREATE TABLE IF NOT EXISTS`
+  - Index : `CREATE INDEX IF NOT EXISTS`
+  - Policies : `DROP POLICY IF EXISTS` puis `CREATE POLICY`
+  - Colonnes : `ADD COLUMN IF NOT EXISTS`, `DROP COLUMN IF EXISTS`
 - ✅ Supprime automatiquement `host_id` (remplacée par `game_master_id`)
-- ✅ RLS (Row Level Security) configurée pour toutes les nouvelles tables
+- ✅ RLS (Row Level Security) : 25 policies configurées pour toutes les tables
 
 ---
 
