@@ -165,13 +165,11 @@ BEGIN
   INSERT INTO decks (
     id,
     user_id,
-    name,
-    is_default
+    name
   ) VALUES (
     v_deck_id,
     v_gm_user_id,
-    'Test Deck for TEST99',
-    false
+    'Test Deck for TEST99'
   );
 
   RAISE NOTICE 'Deck cree: %', v_deck_id;
