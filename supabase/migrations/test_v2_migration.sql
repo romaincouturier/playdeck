@@ -252,16 +252,13 @@ BEGIN
   -- Le test valide la structure (zones, joueurs, tours) sans besoin de cartes
   RAISE NOTICE 'Test sans cartes (validation structure uniquement)';
 
-  -- Initialiser le turn state
-  PERFORM initialize_turn_state(v_game_id);
-  RAISE NOTICE 'Turn state initialise';
-
   -- Mettre a jour le statut de la partie a "playing"
+  -- Note: Le trigger va automatiquement créer le turn_state
   UPDATE games
   SET status = 'playing', started_at = NOW()
   WHERE id = v_game_id;
 
-  RAISE NOTICE 'Partie demarree';
+  RAISE NOTICE 'Partie demarree (turn_state cree automatiquement par trigger)';
 
   -- Enregistrer une action primitive (distribution)
   INSERT INTO primitive_actions (
