@@ -17,7 +17,7 @@
 DELETE FROM games WHERE code = 'TEST99';
 DELETE FROM games WHERE code LIKE 'TEST%';
 
-RAISE NOTICE 'Données de test supprimées';
+SELECT '✓ Données de test supprimées' as status;
 
 -- ============================================================================
 -- 2. SUPPRIMER LES TRIGGERS
@@ -26,7 +26,7 @@ RAISE NOTICE 'Données de test supprimées';
 DROP TRIGGER IF EXISTS trigger_create_zones_on_game_start ON games;
 DROP FUNCTION IF EXISTS trigger_create_default_zones();
 
-RAISE NOTICE 'Triggers supprimés';
+SELECT '✓ Triggers supprimés' as status;
 
 -- ============================================================================
 -- 3. SUPPRIMER LES FONCTIONS
@@ -44,7 +44,7 @@ DROP FUNCTION IF EXISTS record_primitive_action(UUID, UUID, TEXT, UUID[], UUID, 
 DROP FUNCTION IF EXISTS apply_primitive_action(UUID);
 DROP FUNCTION IF EXISTS get_visible_cards_for_player(UUID, UUID);
 
-RAISE NOTICE 'Fonctions supprimées';
+SELECT '✓ Fonctions supprimées' as status;
 
 -- ============================================================================
 -- 4. SUPPRIMER LES TABLES V2 (dans l'ordre inverse des dépendances)
@@ -67,7 +67,7 @@ DROP TABLE IF EXISTS game_rules_text CASCADE;
 DROP TABLE IF EXISTS zones CASCADE;
 DROP TABLE IF EXISTS game_master CASCADE;
 
-RAISE NOTICE 'Tables v2 supprimées';
+SELECT '✓ Tables v2 supprimées' as status;
 
 -- ============================================================================
 -- 5. RESTAURER CONTRAINTE deck_id NOT NULL (si nécessaire)
@@ -109,7 +109,7 @@ ALTER TABLE game_cards
 ALTER TABLE cards
   DROP COLUMN IF EXISTS numeric_values;
 
-RAISE NOTICE 'Colonnes v2 supprimées des tables existantes';
+SELECT '✓ Colonnes v2 supprimées des tables existantes' as status;
 
 -- ============================================================================
 -- 7. RESTAURER COLONNES V1 (optionnel - commenté par défaut)
