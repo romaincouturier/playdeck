@@ -382,6 +382,7 @@ ALTER TABLE games
 
 -- Supprimer colonnes obsolètes
 ALTER TABLE games
+  DROP COLUMN IF EXISTS host_id,
   DROP COLUMN IF EXISTS current_phase_id,
   DROP COLUMN IF EXISTS current_turn_player_id,
   DROP COLUMN IF EXISTS current_turn_guest_id;
