@@ -332,10 +332,10 @@ WHERE game_id IN (SELECT id FROM games WHERE code = 'TEST99')
 ORDER BY player_order;
 
 SELECT 'TEST 22: Verification des cartes' as test;
-SELECT id, zone_id, card_position, is_face_up
+SELECT id, game_id, card_id, zone_id, face_visible, owner_id, group_id
 FROM game_cards
 WHERE game_id IN (SELECT id FROM games WHERE code = 'TEST99')
-ORDER BY card_position;
+ORDER BY id;
 
 SELECT 'TEST 23: Verification du turn_state' as test;
 SELECT game_id, current_player_id, direction, turn_number, is_paused
