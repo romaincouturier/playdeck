@@ -391,6 +391,12 @@ CREATE POLICY "Players can manage own groups"
 -- 2. MODIFICATIONS TABLES EXISTANTES
 -- ============================================================================
 
+-- Table: games - Supprimer anciennes policies avant de supprimer colonnes
+DROP POLICY IF EXISTS "games_select_participant" ON games;
+DROP POLICY IF EXISTS "games_insert_policy" ON games;
+DROP POLICY IF EXISTS "games_update_policy" ON games;
+DROP POLICY IF EXISTS "games_delete_policy" ON games;
+
 -- Table: games - Ajout colonnes v2
 ALTER TABLE games
   ADD COLUMN IF NOT EXISTS game_master_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
@@ -410,6 +416,37 @@ COMMENT ON COLUMN games.game_mode IS 'Toujours UNIVERSAL en v2';
 
 -- Index
 CREATE INDEX IF NOT EXISTS idx_games_game_master ON games(game_master_id);
+
+-- RLS pour games (recréer avec game_master_id)
+ALTER TABLE games ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Players can view games they participate in" ON games;
+CREATE POLICY "Players can view games they participate in"
+  ON games FOR SELECT
+  USING (
+    status = 'public'
+    OR game_master_id = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM game_players
+      WHERE game_players.game_id = games.id
+      AND (game_players.user_id = auth.uid() OR game_players.guest_session_id = current_setting('app.guest_session_id', true))
+    )
+  );
+
+DROP POLICY IF EXISTS "Game master can create games" ON games;
+CREATE POLICY "Game master can create games"
+  ON games FOR INSERT
+  WITH CHECK (game_master_id = auth.uid());
+
+DROP POLICY IF EXISTS "Game master can update own games" ON games;
+CREATE POLICY "Game master can update own games"
+  ON games FOR UPDATE
+  USING (game_master_id = auth.uid());
+
+DROP POLICY IF EXISTS "Game master can delete own games" ON games;
+CREATE POLICY "Game master can delete own games"
+  ON games FOR DELETE
+  USING (game_master_id = auth.uid());
 
 -- ============================================================================
 
