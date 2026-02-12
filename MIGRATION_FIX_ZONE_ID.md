@@ -9,32 +9,55 @@ ERROR: 42804: foreign key constraint "game_cards_zone_id_fkey" cannot be impleme
 DETAIL: Key columns "zone_id" and "id" are of incompatible types: text and uuid.
 ```
 
+Ou cette erreur :
+
+```
+ERROR: 42883: operator does not exist: uuid = text
+HINT: No operator matches the given name and argument types. You might need to add explicit type casts.
+```
+
 **Cause** : La colonne `game_cards.zone_id` a été renommée depuis `location` (qui était TEXT), mais n'a pas été convertie en UUID pour correspondre à `zones.id`.
 
 ---
 
 ## ✅ Solution en 2 étapes
 
-### Étape 1 : Appliquer le correctif
+### Étape 1 : Appliquer le correctif v3 (méthode CREATE + RENAME)
 
 Dans **Supabase SQL Editor**, exécutez le contenu de ce fichier :
 
-📄 `supabase/migrations/fix_zone_id_type.sql`
+📄 `supabase/migrations/fix_zone_id_type_v3.sql`
 
-Ce script va :
+Ce script v3 utilise une méthode plus robuste (CREATE + RENAME) :
 1. ✅ Supprimer l'ancienne contrainte FK (si elle existe)
 2. ✅ Vérifier le type actuel de `zone_id`
-3. ✅ Convertir `zone_id` de TEXT vers UUID
-4. ✅ Nettoyer les valeurs invalides (non-UUID)
-5. ✅ Recréer la contrainte FK vers `zones(id)`
-6. ✅ Vérifier que tout est correct
+3. ✅ Créer une nouvelle colonne `zone_id_new` de type UUID
+4. ✅ Copier les valeurs UUID valides de l'ancienne colonne
+5. ✅ Supprimer l'ancienne colonne TEXT
+6. ✅ Renommer la nouvelle colonne en `zone_id`
+7. ✅ Recréer la contrainte FK vers `zones(id)`
+8. ✅ Vérifier que tout est correct
 
 **Résultat attendu** :
 ```
-✅ game_cards.zone_id converti en UUID
-✅ Contrainte game_cards_zone_id_fkey créée
-✅ Les types correspondent!
-🎉 Migration du type zone_id terminée avec succès!
+✅ Contrainte FK supprimée
+Type actuel de zone_id: text
+Conversion de zone_id TEXT → UUID via nouvelle colonne...
+  → Colonne zone_id_new créée
+  → Valeurs UUID valides copiées
+  → Ancienne colonne zone_id supprimée
+  → Colonne renommée zone_id_new → zone_id
+✅ Conversion terminée avec succès
+✅ zones.id est de type UUID
+✅ Contrainte FK créée
+======================
+RAPPORT FINAL:
+======================
+Types:
+  game_cards.zone_id: uuid
+  zones.id: uuid
+
+🎉 Migration réussie! Les types correspondent.
 ```
 
 ---
