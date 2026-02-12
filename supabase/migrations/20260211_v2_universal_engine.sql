@@ -986,7 +986,7 @@ BEGIN
     'cards', (SELECT jsonb_agg(row_to_json(gc.*)) FROM game_cards gc WHERE gc.game_id = p_game_id),
     'turnState', row_to_json(ts.*),
     'rules', row_to_json(gr.*),
-    'actionsHistory', (SELECT jsonb_agg(row_to_json(pa.*)) FROM primitive_actions pa WHERE pa.game_id = p_game_id ORDER BY created_at)
+    'actionsHistory', (SELECT jsonb_agg(row_to_json(pa.*) ORDER BY pa.created_at) FROM primitive_actions pa WHERE pa.game_id = p_game_id)
   )
   INTO v_snapshot_data
   FROM games g
