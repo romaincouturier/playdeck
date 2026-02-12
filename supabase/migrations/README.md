@@ -1,5 +1,15 @@
 # Migrations Supabase - PlayDeck v2
 
+## 🚀 Guide Rapide
+
+**Vous voulez juste appliquer la migration ?**
+
+👉 **Consultez le guide simplifié** : [`APPLY_MIGRATION_V2_SIMPLE.md`](../../APPLY_MIGRATION_V2_SIMPLE.md)
+
+Un seul script à exécuter, tout est unifié et prêt à l'emploi !
+
+---
+
 ## Vue d'ensemble
 
 Ce dossier contient les scripts de migration pour le moteur universel v2 de PlayDeck.

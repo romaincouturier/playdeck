@@ -540,38 +540,54 @@ BEGIN
 END $$;
 
 -- Convertir zone_id de TEXT vers UUID si nécessaire (après rename de location)
--- Gère aussi la contrainte NOT NULL qui peut exister
+-- Utilise méthode CREATE + RENAME pour éviter les erreurs de casting
 DO $$
 DECLARE
   current_type text;
-  was_not_null boolean;
 BEGIN
   SELECT data_type INTO current_type
   FROM information_schema.columns
   WHERE table_name = 'game_cards' AND column_name = 'zone_id';
 
-  IF current_type = 'text' OR current_type = 'character varying' THEN
-    -- Vérifier si la colonne avait NOT NULL
-    SELECT is_nullable = 'NO' INTO was_not_null
-    FROM information_schema.columns
-    WHERE table_name = 'game_cards' AND column_name = 'zone_id';
+  IF current_type IN ('text', 'character varying') THEN
+    RAISE NOTICE 'Conversion de zone_id TEXT → UUID via nouvelle colonne...';
 
-    -- Supprimer temporairement NOT NULL si elle existe
-    IF was_not_null THEN
-      ALTER TABLE game_cards ALTER COLUMN zone_id DROP NOT NULL;
-    END IF;
+    -- Créer une nouvelle colonne temporaire de type UUID
+    ALTER TABLE game_cards ADD COLUMN zone_id_new UUID;
+    RAISE NOTICE '  → Colonne zone_id_new créée';
 
-    -- Supprimer les valeurs qui ne sont pas des UUID valides
+    -- Copier les valeurs valides (UUID uniquement)
     UPDATE game_cards
-    SET zone_id = NULL
+    SET zone_id_new = zone_id::uuid
     WHERE zone_id IS NOT NULL
-      AND zone_id !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+      AND zone_id ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+    RAISE NOTICE '  → Valeurs UUID valides copiées';
 
-    -- Convertir la colonne en UUID
-    ALTER TABLE game_cards
-    ALTER COLUMN zone_id TYPE UUID USING zone_id::uuid;
+    -- Compter combien de lignes n'ont pas pu être converties
+    DECLARE
+      invalid_count integer;
+    BEGIN
+      SELECT COUNT(*) INTO invalid_count
+      FROM game_cards
+      WHERE zone_id IS NOT NULL
+        AND zone_id !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
 
-    -- Note: On ne remet PAS NOT NULL car les cartes peuvent temporairement ne pas avoir de zone
+      IF invalid_count > 0 THEN
+        RAISE NOTICE '  ⚠️  % ligne(s) avec valeurs non-UUID ignorées', invalid_count;
+      END IF;
+    END;
+
+    -- Supprimer l'ancienne colonne zone_id
+    ALTER TABLE game_cards DROP COLUMN zone_id;
+    RAISE NOTICE '  → Ancienne colonne zone_id supprimée';
+
+    -- Renommer la nouvelle colonne
+    ALTER TABLE game_cards RENAME COLUMN zone_id_new TO zone_id;
+    RAISE NOTICE '  → Colonne renommée zone_id_new → zone_id';
+
+    RAISE NOTICE '✅ Conversion terminée avec succès';
+  ELSIF current_type = 'uuid' THEN
+    RAISE NOTICE '✅ zone_id est déjà de type UUID';
   END IF;
 END $$;
 
