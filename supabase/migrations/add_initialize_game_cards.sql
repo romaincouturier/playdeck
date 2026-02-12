@@ -88,15 +88,28 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
+DECLARE
+  v_player RECORD;
 BEGIN
   IF NEW.status = 'playing' AND OLD.status = 'waiting' THEN
-    -- 1. Créer les zones par défaut
+    -- 1. Créer les zones par défaut (DECK, CENTER, DISCARD)
     PERFORM create_default_zones(NEW.id);
 
-    -- 2. Initialiser les cartes du deck
+    -- 2. Créer les zones HAND pour TOUS les joueurs existants
+    --    (ceux qui ont rejoint pendant le lobby n'ont pas de HAND zone)
+    FOR v_player IN
+      SELECT id, name
+      FROM game_players
+      WHERE game_id = NEW.id
+        AND role = 'PLAYER'
+    LOOP
+      PERFORM create_player_hand_zone(NEW.id, v_player.id, v_player.name);
+    END LOOP;
+
+    -- 3. Initialiser les cartes du deck
     PERFORM initialize_game_cards(NEW.id);
 
-    -- 3. Initialiser turn_state
+    -- 4. Initialiser turn_state
     PERFORM initialize_turn_state(NEW.id);
   END IF;
   RETURN NEW;
@@ -126,9 +139,10 @@ BEGIN
   RAISE NOTICE '';
   RAISE NOTICE 'Flow when game starts:';
   RAISE NOTICE '  1. Create zones (DECK, CENTER, DISCARD)';
-  RAISE NOTICE '  2. Initialize game_cards from deck → DECK zone';
-  RAISE NOTICE '  3. Initialize turn_state';
-  RAISE NOTICE '  4. distribute_cards can now work!';
+  RAISE NOTICE '  2. Create HAND zones for all existing players';
+  RAISE NOTICE '  3. Initialize game_cards from deck → DECK zone';
+  RAISE NOTICE '  4. Initialize turn_state';
+  RAISE NOTICE '  5. distribute_cards can now work!';
   RAISE NOTICE '';
   RAISE NOTICE '🎉 Card distribution should work now!';
   RAISE NOTICE '';
