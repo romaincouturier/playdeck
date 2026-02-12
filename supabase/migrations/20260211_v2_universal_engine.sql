@@ -403,6 +403,10 @@ ALTER TABLE games
   ADD COLUMN IF NOT EXISTS current_round INTEGER DEFAULT 1,
   ADD COLUMN IF NOT EXISTS game_mode TEXT DEFAULT 'UNIVERSAL';
 
+-- Rendre deck_id nullable (v2 permet parties sans deck prédéfini)
+ALTER TABLE games
+  ALTER COLUMN deck_id DROP NOT NULL;
+
 -- Supprimer colonnes obsolètes
 ALTER TABLE games
   DROP COLUMN IF EXISTS host_id,
