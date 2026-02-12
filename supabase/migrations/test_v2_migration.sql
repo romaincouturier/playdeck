@@ -326,10 +326,10 @@ WHERE game_id IN (SELECT id FROM games WHERE code = 'TEST99')
 ORDER BY type;
 
 SELECT 'TEST 21: Verification des joueurs' as test;
-SELECT id, player_name, role, is_active, score, position
+SELECT id, user_id, guest_session_id, role, score, player_order
 FROM game_players
 WHERE game_id IN (SELECT id FROM games WHERE code = 'TEST99')
-ORDER BY position;
+ORDER BY player_order;
 
 SELECT 'TEST 22: Verification des cartes' as test;
 SELECT id, zone_id, card_position, is_face_up
