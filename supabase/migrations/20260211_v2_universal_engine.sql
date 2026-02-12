@@ -464,16 +464,39 @@ CREATE INDEX IF NOT EXISTS idx_game_players_role ON game_players(game_id, role);
 -- ============================================================================
 
 -- Table: game_cards - Simplification et ajout colonnes
+-- Renommer location → zone_id si la colonne existe
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'game_cards' AND column_name = 'location'
+  ) THEN
+    ALTER TABLE game_cards RENAME COLUMN location TO zone_id;
+  END IF;
+END $$;
+
+-- Ajouter zone_id si elle n'existe pas (pour installations fraîches)
 ALTER TABLE game_cards
-  RENAME COLUMN location TO zone_id;
+  ADD COLUMN IF NOT EXISTS zone_id UUID REFERENCES zones(id) ON DELETE CASCADE;
 
 ALTER TABLE game_cards
   ADD COLUMN IF NOT EXISTS face_visible BOOLEAN DEFAULT false,
   ADD COLUMN IF NOT EXISTS group_id UUID REFERENCES card_groups(id) ON DELETE SET NULL;
 
--- Renommer colonnes propriétaire
+-- Renommer owner_user_id → owner_id si la colonne existe
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'game_cards' AND column_name = 'owner_user_id'
+  ) THEN
+    ALTER TABLE game_cards RENAME COLUMN owner_user_id TO owner_id;
+  END IF;
+END $$;
+
+-- Ajouter owner_id si elle n'existe pas (pour installations fraîches)
 ALTER TABLE game_cards
-  RENAME COLUMN owner_user_id TO owner_id;
+  ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES game_players(id) ON DELETE SET NULL;
 
 ALTER TABLE game_cards
   DROP COLUMN IF EXISTS owner_guest_session_id;
