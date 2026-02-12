@@ -215,21 +215,24 @@ BEGIN
     game_id,
     user_id,
     role,
-    score
+    score,
+    player_order
   ) VALUES
   (
     v_player1_id,
     v_game_id,
     NULL,
     'PLAYER',
-    0
+    0,
+    1
   ),
   (
     v_player2_id,
     v_game_id,
     NULL,
     'PLAYER',
-    0
+    0,
+    2
   );
 
   RAISE NOTICE 'Joueurs crees';
