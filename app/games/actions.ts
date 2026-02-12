@@ -93,15 +93,17 @@ export async function createGame(deckId: string, maxPlayers: number) {
 
   console.log('[CreateGame] Code généré:', code)
 
-  // Créer la partie
+  // Créer la partie (v2: utilise game_master_id au lieu de host_id)
   const { data: game, error: gameError } = await supabase
     .from('games')
     .insert({
-      host_id: user.id,
+      game_master_id: user.id,  // v2: game_master_id remplace host_id
       deck_id: deckId,
       code,
       max_players: maxPlayers,
       status: 'waiting',
+      game_mode: 'UNIVERSAL',  // v2: requis
+      current_round: 1,        // v2: défaut
     })
     .select()
     .single()
@@ -117,12 +119,30 @@ export async function createGame(deckId: string, maxPlayers: number) {
 
   console.log('[CreateGame] Partie créée:', game.id)
 
-  // Ajouter l'hôte comme premier joueur
+  // v2: Créer l'entrée game_master
+  const { error: gmError } = await supabase.from('game_master').insert({
+    game_id: game.id,
+    user_id: user.id,
+    is_playing: true,        // Le GM participe comme joueur
+    omniscient_mode: false,  // Le GM ne voit pas toutes les cartes par défaut
+    can_undo: true,
+  })
+
+  if (gmError) {
+    console.error('[CreateGame] Erreur création game_master:', gmError)
+    // Supprimer la partie si la création du GM échoue
+    await supabase.from('games').delete().eq('id', game.id)
+    throw new Error(`Erreur lors de la configuration du Game Master: ${gmError.message} (${gmError.code})`)
+  }
+
+  // Ajouter l'hôte comme premier joueur (v2: avec role et score)
   const { error: playerError } = await supabase.from('game_players').insert({
     game_id: game.id,
     user_id: user.id,
-    player_order: 0,
+    player_order: 1,      // v2: démarre à 1
     is_host: true,
+    role: 'PLAYER',       // v2: nouveau champ
+    score: 0,             // v2: nouveau champ
   })
 
   if (playerError) {
@@ -196,13 +216,15 @@ export async function joinGame(code: string) {
     throw new Error('La partie est complète')
   }
 
-  // Ajouter le joueur
-  const playerOrder = players ? players.length : 0
+  // Ajouter le joueur (v2: avec role et score)
+  const playerOrder = players ? players.length + 1 : 1  // v2: démarre à 1
   const { error: joinError } = await supabase.from('game_players').insert({
     game_id: game.id,
     user_id: user.id,
     player_order: playerOrder,
     is_host: false,
+    role: 'PLAYER',  // v2: nouveau champ
+    score: 0,        // v2: nouveau champ
   })
 
   if (joinError) {
@@ -271,8 +293,8 @@ export async function joinGameAsGuest(code: string, guestName: string) {
     throw new Error('La partie est complète')
   }
 
-  // Ajouter l'invité
-  const playerOrder = players ? players.length : 0
+  // Ajouter l'invité (v2: avec role et score)
+  const playerOrder = players ? players.length + 1 : 1  // v2: démarre à 1
   const { error: joinError } = await supabase.from('game_players').insert({
     game_id: game.id,
     user_id: null,
@@ -280,6 +302,8 @@ export async function joinGameAsGuest(code: string, guestName: string) {
     guest_name: guestName,
     player_order: playerOrder,
     is_host: false,
+    role: 'PLAYER',  // v2: nouveau champ
+    score: 0,        // v2: nouveau champ
   })
 
   if (joinError) {
@@ -303,16 +327,24 @@ export async function startGame(gameId: string) {
     throw new Error('Non authentifié')
   }
 
-  // Vérifier que l'utilisateur est l'hôte
+  // v2: Vérifier que l'utilisateur est le Game Master
   const { data: game, error: gameError } = await supabase
     .from('games')
-    .select('id, host_id, status')
+    .select(`
+      id,
+      status,
+      game_master_id
+    `)
     .eq('id', gameId)
-    .eq('host_id', user.id)
     .single()
 
   if (gameError || !game) {
-    throw new Error('Partie introuvable ou vous n\'êtes pas l\'hôte')
+    throw new Error('Partie introuvable')
+  }
+
+  // v2: Vérifier que l'utilisateur est le Game Master
+  if (game.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut démarrer la partie')
   }
 
   if (game.status !== 'waiting') {
@@ -330,19 +362,17 @@ export async function startGame(gameId: string) {
     throw new Error('Il faut au moins 2 joueurs pour commencer')
   }
 
-  // Mettre à jour le statut de la partie
-  const firstPlayer = players[0]
-  const firstPlayerId = firstPlayer.user_id || firstPlayer.guest_session_id
-  const isGuestFirst = !firstPlayer.user_id && !!firstPlayer.guest_session_id
-
+  // v2: Mettre à jour le statut de la partie
+  // Le trigger on_game_start_create_zones va automatiquement:
+  // - Créer les zones par défaut (DECK, CENTER, DISCARD)
+  // - Initialiser turn_state avec turn_order
   const { error: updateError } = await supabase
     .from('games')
     .update({
       status: 'playing',
       started_at: new Date().toISOString(),
-      current_turn_player_id: isGuestFirst ? null : firstPlayer.user_id,
-      current_turn_guest_id: isGuestFirst ? firstPlayer.guest_session_id : null,
-      current_phase_id: 'main'
+      // v2: Les colonnes current_turn_player_id, current_turn_guest_id, current_phase_id
+      //     ont été supprimées. La gestion des tours est maintenant dans turn_state.
     })
     .eq('id', gameId)
 
