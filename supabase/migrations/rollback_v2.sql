@@ -4,9 +4,21 @@
 -- Ce script supprime toutes les tables et fonctions créées par la migration v2
 -- ATTENTION: Cela supprimera toutes les données de test !
 --
+-- ⚠️ LIMITATIONS IMPORTANTES:
+-- Ce script NE RESTAURE PAS la structure v1. Il supprime uniquement v2.
+-- Après exécution, la base de données sera dans un état "v2 supprimé" mais
+-- pas dans un état "v1 restauré". Les colonnes v2 ajoutées aux tables
+-- existantes (games, game_players, game_cards, cards) seront supprimées.
+--
+-- Pour une vraie restauration v1, vous devrez:
+-- 1. Restaurer manuellement la contrainte NOT NULL sur games.deck_id
+-- 2. Recréer les colonnes v1 si nécessaire (host_id, etc.)
+-- 3. Recréer les policies RLS v1
+--
 -- Utilisation:
 -- - Pour nettoyer juste les données de test: exécuter section 1 uniquement
 -- - Pour rollback complet v2: exécuter tout le script
+-- - Pour restaurer v1: exécuter ce script PUIS les migrations v1
 -- ============================================================================
 
 -- ============================================================================

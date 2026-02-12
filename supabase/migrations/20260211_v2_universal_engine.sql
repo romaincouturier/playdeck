@@ -9,7 +9,7 @@
 -- Table: game_master - Configuration du Maître du Jeu
 CREATE TABLE IF NOT EXISTS game_master (
   game_id UUID PRIMARY KEY REFERENCES games(id) ON DELETE CASCADE,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   is_playing BOOLEAN DEFAULT false,
   omniscient_mode BOOLEAN DEFAULT true,
   can_undo BOOLEAN DEFAULT true,
@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS zones (
 
   -- Propriétés de capacité
   is_ordered BOOLEAN DEFAULT true,
-  max_capacity INTEGER, -- NULL = illimité
+  max_capacity INTEGER CHECK (max_capacity IS NULL OR max_capacity > 0), -- NULL = illimité
 
   -- Propriétaire (NULL = zone globale)
   owner_player_id UUID REFERENCES game_players(id) ON DELETE CASCADE,
@@ -85,6 +85,16 @@ CREATE INDEX IF NOT EXISTS idx_zones_type ON zones(game_id, type);
 CREATE INDEX IF NOT EXISTS idx_zones_owner ON zones(owner_player_id);
 CREATE INDEX IF NOT EXISTS idx_zones_enabled ON zones(game_id) WHERE is_enabled = true;
 
+-- Contrainte unique sur nom de zone par partie (évite confusion)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'zones_game_name_unique'
+  ) THEN
+    ALTER TABLE zones ADD CONSTRAINT zones_game_name_unique UNIQUE (game_id, name);
+  END IF;
+END $$;
+
 -- RLS
 ALTER TABLE zones ENABLE ROW LEVEL SECURITY;
 
@@ -92,10 +102,25 @@ DROP POLICY IF EXISTS "Players can view zones in their games" ON zones;
 CREATE POLICY "Players can view zones in their games"
   ON zones FOR SELECT
   USING (
+    -- Le joueur doit être dans la partie
     EXISTS (
-      SELECT 1 FROM game_players
-      WHERE game_id = zones.game_id
-      AND (user_id = auth.uid() OR guest_session_id = current_setting('app.guest_session_id', true))
+      SELECT 1 FROM game_players gp
+      WHERE gp.game_id = zones.game_id
+      AND (gp.user_id = auth.uid() OR gp.guest_session_id = current_setting('app.guest_session_id', true))
+    )
+    AND (
+      -- Visibilité ALL: tout le monde voit
+      zones.visibility = 'ALL'
+      -- Visibilité OWNER: seul le propriétaire voit
+      OR (zones.visibility = 'OWNER' AND zones.owner_player_id IN (
+        SELECT id FROM game_players WHERE user_id = auth.uid() OR guest_session_id = current_setting('app.guest_session_id', true)
+      ))
+      -- Visibilité GM_ONLY: seul le GM voit (géré par policy GM)
+      OR (zones.visibility = 'GM_ONLY' AND EXISTS (
+        SELECT 1 FROM game_master WHERE game_id = zones.game_id AND user_id = auth.uid()
+      ))
+      -- Visibilité PRIVATE: zone globale visible par tous
+      OR (zones.visibility = 'PRIVATE' AND zones.owner_player_id IS NULL)
     )
   );
 
@@ -305,8 +330,8 @@ CREATE TABLE IF NOT EXISTS turn_state (
   current_player_id UUID REFERENCES game_players(id) ON DELETE SET NULL,
   turn_order UUID[] DEFAULT '{}',
   direction TEXT DEFAULT 'CLOCKWISE' CHECK (direction IN ('CLOCKWISE', 'COUNTER_CLOCKWISE')),
-  turn_number INTEGER DEFAULT 1,
-  timer_seconds INTEGER,
+  turn_number INTEGER DEFAULT 1 CHECK (turn_number >= 1),
+  timer_seconds INTEGER CHECK (timer_seconds IS NULL OR timer_seconds > 0),
   timer_started_at TIMESTAMPTZ,
   is_paused BOOLEAN DEFAULT false,
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -423,6 +448,16 @@ COMMENT ON COLUMN games.game_mode IS 'Toujours UNIVERSAL en v2';
 -- Index
 CREATE INDEX IF NOT EXISTS idx_games_game_master ON games(game_master_id);
 
+-- Contrainte unique sur code de partie
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'games_code_unique'
+  ) THEN
+    ALTER TABLE games ADD CONSTRAINT games_code_unique UNIQUE (code);
+  END IF;
+END $$;
+
 -- RLS pour games (recréer avec game_master_id)
 ALTER TABLE games ENABLE ROW LEVEL SECURITY;
 
@@ -534,7 +569,7 @@ CREATE INDEX IF NOT EXISTS idx_cards_numeric_values ON cards USING GIN (numeric_
 CREATE TABLE IF NOT EXISTS card_marks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
-  card_id UUID NOT NULL,
+  card_id UUID NOT NULL REFERENCES game_cards(id) ON DELETE CASCADE,
   mark_type TEXT NOT NULL CHECK (mark_type IN ('BADGE', 'COLOR', 'ICON')),
   mark_value TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -764,11 +799,21 @@ BEGIN
   FROM turn_state
   WHERE game_id = p_game_id;
 
+  -- Valider que le turn_state existe
+  IF v_turn_order IS NULL THEN
+    RAISE EXCEPTION 'turn_state not found for game_id %', p_game_id;
+  END IF;
+
+  -- Valider que l'array n'est pas vide
+  IF array_length(v_turn_order, 1) IS NULL OR array_length(v_turn_order, 1) = 0 THEN
+    RAISE EXCEPTION 'turn_order is empty for game_id %', p_game_id;
+  END IF;
+
   -- Trouver index actuel
   v_current_index := array_position(v_turn_order, p_current_player_id);
 
   IF v_current_index IS NULL THEN
-    RETURN NULL;
+    RAISE EXCEPTION 'player_id % not found in turn_order for game_id %', p_current_player_id, p_game_id;
   END IF;
 
   -- Calculer index suivant selon direction
@@ -806,6 +851,11 @@ BEGIN
   FROM game_players
   WHERE game_id = p_game_id
   AND role = 'PLAYER';
+
+  -- Valider qu'il y a au moins un joueur
+  IF v_player_ids IS NULL OR array_length(v_player_ids, 1) IS NULL OR array_length(v_player_ids, 1) = 0 THEN
+    RAISE EXCEPTION 'No players found for game_id %. Cannot initialize turn_state without players.', p_game_id;
+  END IF;
 
   -- Créer turn_state
   INSERT INTO turn_state (game_id, turn_order, current_player_id, direction, turn_number)
@@ -953,11 +1003,11 @@ BEGIN
     AND gc.owner_id = p_player_id
     AND gc.zone_id NOT IN (SELECT id FROM zones WHERE game_id = p_game_id AND type = 'DECK')
   LOOP
-    -- Ajouter valeur "scoring" si elle existe
+    -- Ajouter valeur "scoring" si elle existe (avec validation)
     IF v_card.numeric_values ? 'scoring' THEN
-      v_score := v_score + (v_card.numeric_values->>'scoring')::INTEGER;
+      v_score := v_score + COALESCE((v_card.numeric_values->>'scoring')::INTEGER, 0);
     ELSIF v_card.numeric_values ? 'base' THEN
-      v_score := v_score + (v_card.numeric_values->>'base')::INTEGER;
+      v_score := v_score + COALESCE((v_card.numeric_values->>'base')::INTEGER, 0);
     END IF;
   END LOOP;
 
@@ -1044,6 +1094,84 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 COMMENT ON TABLE predefined_games IS 'Jeux prédéfinis incluant Bataille et Uno par défaut';
+
+-- ============================================================================
+-- 5. VALIDATION TRIGGERS POUR ARRAYS
+-- ============================================================================
+
+-- Fonction: Valider que les UUIDs dans turn_order existent dans game_players
+CREATE OR REPLACE FUNCTION validate_turn_order()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_player_id UUID;
+  v_invalid_count INTEGER;
+BEGIN
+  -- Vérifier que tous les IDs dans turn_order sont des joueurs valides
+  SELECT COUNT(*)
+  INTO v_invalid_count
+  FROM unnest(NEW.turn_order) AS player_id
+  WHERE NOT EXISTS (
+    SELECT 1 FROM game_players
+    WHERE id = player_id
+    AND game_id = NEW.game_id
+    AND role = 'PLAYER'
+  );
+
+  IF v_invalid_count > 0 THEN
+    RAISE EXCEPTION 'turn_order contains % invalid player IDs', v_invalid_count;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION validate_turn_order IS 'Valide que turn_order contient uniquement des IDs de joueurs existants';
+
+-- Trigger pour valider turn_order
+DROP TRIGGER IF EXISTS validate_turn_order_trigger ON turn_state;
+CREATE TRIGGER validate_turn_order_trigger
+  BEFORE INSERT OR UPDATE ON turn_state
+  FOR EACH ROW
+  WHEN (NEW.turn_order IS NOT NULL AND array_length(NEW.turn_order, 1) > 0)
+  EXECUTE FUNCTION validate_turn_order();
+
+-- Fonction: Valider que les UUIDs dans card_ids existent dans game_cards
+CREATE OR REPLACE FUNCTION validate_card_group_ids()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_invalid_count INTEGER;
+BEGIN
+  -- Vérifier que tous les IDs dans card_ids sont des cartes valides
+  SELECT COUNT(*)
+  INTO v_invalid_count
+  FROM unnest(NEW.card_ids) AS card_id
+  WHERE NOT EXISTS (
+    SELECT 1 FROM game_cards
+    WHERE id = card_id
+    AND game_id = NEW.game_id
+  );
+
+  IF v_invalid_count > 0 THEN
+    RAISE EXCEPTION 'card_ids contains % invalid card IDs', v_invalid_count;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION validate_card_group_ids IS 'Valide que card_ids contient uniquement des IDs de cartes existantes';
+
+-- Trigger pour valider card_ids
+DROP TRIGGER IF EXISTS validate_card_ids_trigger ON card_groups;
+CREATE TRIGGER validate_card_ids_trigger
+  BEFORE INSERT OR UPDATE ON card_groups
+  FOR EACH ROW
+  WHEN (NEW.card_ids IS NOT NULL AND array_length(NEW.card_ids, 1) > 0)
+  EXECUTE FUNCTION validate_card_group_ids();
 
 -- ============================================================================
 
