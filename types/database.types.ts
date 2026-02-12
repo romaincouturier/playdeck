@@ -78,14 +78,13 @@ export interface Database {
       games: {
         Row: {
           id: string
-          host_id: string
-          deck_id: string
+          game_master_id: string | null
+          deck_id: string | null
           code: string
           status: string
           max_players: number
-          current_turn_player_id: string | null
-          current_turn_guest_id: string | null
-          current_phase_id: string
+          current_round: number
+          game_mode: string
           victory_conditions: Json
           created_at: string
           started_at: string | null
@@ -93,14 +92,13 @@ export interface Database {
         }
         Insert: {
           id?: string
-          host_id: string
-          deck_id: string
+          game_master_id?: string | null
+          deck_id?: string | null
           code: string
           status?: string
           max_players?: number
-          current_turn_player_id?: string | null
-          current_turn_guest_id?: string | null
-          current_phase_id?: string
+          current_round?: number
+          game_mode?: string
           victory_conditions?: Json
           created_at?: string
           started_at?: string | null
@@ -108,14 +106,13 @@ export interface Database {
         }
         Update: {
           id?: string
-          host_id?: string
-          deck_id?: string
+          game_master_id?: string | null
+          deck_id?: string | null
           code?: string
           status?: string
           max_players?: number
-          current_turn_player_id?: string | null
-          current_turn_guest_id?: string | null
-          current_phase_id?: string
+          current_round?: number
+          game_mode?: string
           victory_conditions?: Json
           created_at?: string
           started_at?: string | null
@@ -130,6 +127,8 @@ export interface Database {
           user_id: string | null
           player_order: number
           is_host: boolean
+          role: string
+          score: number
           joined_at: string
           guest_name: string | null
           guest_session_id: string | null
@@ -141,6 +140,8 @@ export interface Database {
           user_id?: string | null
           player_order: number
           is_host?: boolean
+          role?: string
+          score?: number
           joined_at?: string
           guest_name?: string | null
           guest_session_id?: string | null
@@ -152,6 +153,8 @@ export interface Database {
           user_id?: string | null
           player_order?: number
           is_host?: boolean
+          role?: string
+          score?: number
           joined_at?: string
           guest_name?: string | null
           guest_session_id?: string | null
@@ -164,7 +167,7 @@ export interface Database {
           id: string
           game_id: string
           card_id: string
-          location: string
+          zone_id: string | null
           owner_user_id: string | null
           owner_guest_session_id: string | null
           position: number
@@ -174,7 +177,7 @@ export interface Database {
           id?: string
           game_id: string
           card_id: string
-          location: string
+          zone_id?: string | null
           owner_user_id?: string | null
           owner_guest_session_id?: string | null
           position: number
@@ -184,7 +187,7 @@ export interface Database {
           id?: string
           game_id?: string
           card_id?: string
-          location?: string
+          zone_id?: string | null
           owner_user_id?: string | null
           owner_guest_session_id?: string | null
           position?: number
@@ -219,51 +222,57 @@ export interface Database {
       zones: {
         Row: {
           id: string
-          deck_id: string
+          game_id: string
           name: string
           type: string
           visibility: string
-          max_cards: number | null
-          min_cards: number | null
-          can_view: string
-          can_draw: string
-          can_play_to: string
+          default_face: string
           is_ordered: boolean
-          shuffle_on_init: boolean
-          scope: string
+          max_capacity: number | null
+          owner_player_id: string | null
+          is_enabled: boolean
+          position_x: number | null
+          position_y: number | null
+          width: number | null
+          height: number | null
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
-          deck_id: string
+          game_id: string
           name: string
           type: string
-          visibility: string
-          max_cards?: number | null
-          min_cards?: number | null
-          can_view?: string
-          can_draw?: string
-          can_play_to?: string
+          visibility?: string
+          default_face?: string
           is_ordered?: boolean
-          shuffle_on_init?: boolean
-          scope?: string
+          max_capacity?: number | null
+          owner_player_id?: string | null
+          is_enabled?: boolean
+          position_x?: number | null
+          position_y?: number | null
+          width?: number | null
+          height?: number | null
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
-          deck_id?: string
+          game_id?: string
           name?: string
           type?: string
           visibility?: string
-          max_cards?: number | null
-          min_cards?: number | null
-          can_view?: string
-          can_draw?: string
-          can_play_to?: string
+          default_face?: string
           is_ordered?: boolean
-          shuffle_on_init?: boolean
-          scope?: string
+          max_capacity?: number | null
+          owner_player_id?: string | null
+          is_enabled?: boolean
+          position_x?: number | null
+          position_y?: number | null
+          width?: number | null
+          height?: number | null
           created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
