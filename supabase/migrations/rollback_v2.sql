@@ -20,16 +20,34 @@ DELETE FROM games WHERE code LIKE 'TEST%';
 SELECT '✓ Données de test supprimées' as status;
 
 -- ============================================================================
--- 2. SUPPRIMER LES TRIGGERS
+-- 2. SUPPRIMER LES TRIGGERS (avant les fonctions)
 -- ============================================================================
 
-DROP TRIGGER IF EXISTS trigger_create_zones_on_game_start ON games;
-DROP FUNCTION IF EXISTS trigger_create_default_zones();
+-- Triggers sur games
+DROP TRIGGER IF EXISTS on_game_start_create_zones ON games;
+
+-- Triggers sur game_players
+DROP TRIGGER IF EXISTS on_player_join_create_hand ON game_players;
+
+-- Triggers pour updated_at
+DROP TRIGGER IF EXISTS update_zones_updated_at ON zones;
+DROP TRIGGER IF EXISTS update_turn_state_updated_at ON turn_state;
+DROP TRIGGER IF EXISTS update_game_rules_updated_at ON game_rules_text;
 
 SELECT '✓ Triggers supprimés' as status;
 
 -- ============================================================================
--- 3. SUPPRIMER LES FONCTIONS
+-- 3. SUPPRIMER LES FONCTIONS TRIGGER
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS trigger_create_default_zones();
+DROP FUNCTION IF EXISTS trigger_create_player_hand();
+DROP FUNCTION IF EXISTS update_updated_at_column();
+
+SELECT '✓ Fonctions trigger supprimées' as status;
+
+-- ============================================================================
+-- 4. SUPPRIMER LES FONCTIONS UTILITAIRES
 -- ============================================================================
 
 DROP FUNCTION IF EXISTS create_default_zones(UUID);
@@ -44,10 +62,10 @@ DROP FUNCTION IF EXISTS record_primitive_action(UUID, UUID, TEXT, UUID[], UUID, 
 DROP FUNCTION IF EXISTS apply_primitive_action(UUID);
 DROP FUNCTION IF EXISTS get_visible_cards_for_player(UUID, UUID);
 
-SELECT '✓ Fonctions supprimées' as status;
+SELECT '✓ Fonctions utilitaires supprimées' as status;
 
 -- ============================================================================
--- 4. SUPPRIMER LES TABLES V2 (dans l'ordre inverse des dépendances)
+-- 5. SUPPRIMER LES TABLES V2 (dans l'ordre inverse des dépendances)
 -- ============================================================================
 
 -- Tables P1/P2
@@ -70,14 +88,14 @@ DROP TABLE IF EXISTS game_master CASCADE;
 SELECT '✓ Tables v2 supprimées' as status;
 
 -- ============================================================================
--- 5. RESTAURER CONTRAINTE deck_id NOT NULL (si nécessaire)
+-- 6. RESTAURER CONTRAINTE deck_id NOT NULL (si nécessaire)
 -- ============================================================================
 
 -- Remettre deck_id en NOT NULL si vous voulez revenir à v1
 -- ALTER TABLE games ALTER COLUMN deck_id SET NOT NULL;
 
 -- ============================================================================
--- 6. SUPPRIMER COLONNES V2 DES TABLES EXISTANTES
+-- 7. SUPPRIMER COLONNES V2 DES TABLES EXISTANTES
 -- ============================================================================
 
 -- games: supprimer colonnes v2
@@ -112,7 +130,7 @@ ALTER TABLE cards
 SELECT '✓ Colonnes v2 supprimées des tables existantes' as status;
 
 -- ============================================================================
--- 7. RESTAURER COLONNES V1 (optionnel - commenté par défaut)
+-- 8. RESTAURER COLONNES V1 (optionnel - commenté par défaut)
 -- ============================================================================
 
 -- Restaurer colonne host_id (si vous voulez revenir à v1)
