@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { Shuffle, Eye, UserPlus, Trash2, RotateCcw, Trophy, Plus, Minus, Play } from 'lucide-react'
+import { Shuffle, Eye, UserPlus, Trash2, RotateCcw, Trophy, Plus, Minus, Play, RefreshCw, SkipForward, FastForward } from 'lucide-react'
 
 interface GMControlPanelProps {
   gameId: string
@@ -19,6 +19,10 @@ interface GMControlPanelProps {
   onNewRound: () => void
   onRecallCards: () => void
   onRandomFirstPlayer: () => void
+  // P1 actions
+  onReverseDirection: () => void
+  onSkipPlayer: () => void
+  onPassToPlayer: (playerId: string) => void
 }
 
 export function GMControlPanel({
@@ -34,6 +38,9 @@ export function GMControlPanel({
   onNewRound,
   onRecallCards,
   onRandomFirstPlayer,
+  onReverseDirection,
+  onSkipPlayer,
+  onPassToPlayer,
 }: GMControlPanelProps) {
   const [selectedPlayer, setSelectedPlayer] = useState<string>('')
   const [distributeCount, setDistributeCount] = useState(5)
@@ -109,6 +116,38 @@ export function GMControlPanel({
               <Shuffle className="w-4 h-4 mr-2" />
               Premier joueur aléatoire
             </Button>
+
+            {/* P1: REVERSE_DIRECTION */}
+            <Button
+              onClick={onReverseDirection}
+              className="w-full justify-start bg-st-gray hover:bg-st-gray/80"
+              size="sm"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Inverser direction
+            </Button>
+
+            {/* P1: SKIP_PLAYER */}
+            <Button
+              onClick={onSkipPlayer}
+              className="w-full justify-start bg-st-gray hover:bg-st-gray/80"
+              size="sm"
+            >
+              <SkipForward className="w-4 h-4 mr-2" />
+              Sauter joueur actuel
+            </Button>
+
+            {/* P1: PASS_TO_PLAYER */}
+            {selectedPlayer && (
+              <Button
+                onClick={() => onPassToPlayer(selectedPlayer)}
+                className="w-full justify-start bg-blue-700 hover:bg-blue-600"
+                size="sm"
+              >
+                <FastForward className="w-4 h-4 mr-2" />
+                Forcer tour à ce joueur
+              </Button>
+            )}
           </div>
         </div>
 

@@ -380,3 +380,160 @@ export async function randomFirstPlayer(gameId: string) {
   revalidatePath(`/games/${gameId}`)
   return { success: true, playerId: randomPlayer.id }
 }
+
+// ============================================================================
+// P1 PRIMITIVE ACTIONS - Advanced Turn Management
+// ============================================================================
+
+/**
+ * P1: REVERSE_DIRECTION
+ * Inverse la direction des tours (CLOCKWISE <-> COUNTERCLOCKWISE)
+ */
+export async function reverseTurnDirection(gameId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut inverser la direction')
+  }
+
+  // Récupérer la direction actuelle
+  const { data: turnState } = await supabase
+    .from('turn_state')
+    .select('direction')
+    .eq('game_id', gameId)
+    .single()
+
+  if (!turnState) {
+    throw new Error('État des tours introuvable')
+  }
+
+  const newDirection = turnState.direction === 'CLOCKWISE' ? 'COUNTERCLOCKWISE' : 'CLOCKWISE'
+
+  // Mettre à jour
+  await supabase
+    .from('turn_state')
+    .update({ direction: newDirection })
+    .eq('game_id', gameId)
+
+  revalidatePath(`/games/${gameId}`)
+  return { success: true, direction: newDirection }
+}
+
+/**
+ * P1: SKIP_PLAYER
+ * Saute le joueur actuel et passe au suivant
+ */
+export async function skipCurrentPlayer(gameId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut sauter un joueur')
+  }
+
+  // Récupérer turn_state
+  const { data: turnState } = await supabase
+    .from('turn_state')
+    .select('turn_order, current_player_id, direction')
+    .eq('game_id', gameId)
+    .single()
+
+  if (!turnState || !turnState.current_player_id) {
+    throw new Error('État des tours introuvable')
+  }
+
+  // Calculer le joueur suivant
+  const currentIndex = turnState.turn_order.indexOf(turnState.current_player_id)
+  if (currentIndex === -1) {
+    throw new Error('Joueur actuel introuvable dans turn_order')
+  }
+
+  const nextIndex =
+    turnState.direction === 'CLOCKWISE'
+      ? (currentIndex + 1) % turnState.turn_order.length
+      : (currentIndex - 1 + turnState.turn_order.length) % turnState.turn_order.length
+
+  const nextPlayerId = turnState.turn_order[nextIndex]
+
+  // Mettre à jour
+  await supabase
+    .from('turn_state')
+    .update({ current_player_id: nextPlayerId })
+    .eq('game_id', gameId)
+
+  revalidatePath(`/games/${gameId}`)
+  return { success: true, nextPlayerId }
+}
+
+/**
+ * P1: PASS_TO_PLAYER
+ * Passe le tour à un joueur spécifique
+ */
+export async function passToSpecificPlayer(gameId: string, targetPlayerId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut forcer le tour à un joueur')
+  }
+
+  // Vérifier que le joueur existe dans turn_order
+  const { data: turnState } = await supabase
+    .from('turn_state')
+    .select('turn_order')
+    .eq('game_id', gameId)
+    .single()
+
+  if (!turnState || !turnState.turn_order.includes(targetPlayerId)) {
+    throw new Error('Joueur cible invalide')
+  }
+
+  // Mettre à jour
+  await supabase
+    .from('turn_state')
+    .update({ current_player_id: targetPlayerId })
+    .eq('game_id', gameId)
+
+  revalidatePath(`/games/${gameId}`)
+  return { success: true, targetPlayerId }
+}

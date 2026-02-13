@@ -14,11 +14,24 @@ import {
   startNewRound,
   recallAllCards,
   randomFirstPlayer,
+  // P1 GM actions
+  reverseTurnDirection,
+  skipCurrentPlayer,
+  passToSpecificPlayer,
 } from '@/app/games/[id]/gm-actions'
+import {
+  returnCardToDeck,
+  giveCardToPlayer,
+  flipCard,
+  revealCardToAll,
+  drawBottomCard,
+  takeFromDiscard,
+} from '@/app/games/[id]/player-actions'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { CardImage } from '@/components/card-image'
 import { GMControlPanel } from '@/components/gm-control-panel'
+import { CardContextMenu } from '@/components/card-context-menu'
 import { Crown, ArrowRight, Users } from 'lucide-react'
 import { GameState, GameCardState, GamePlayerState } from '@/lib/game/engine'
 
@@ -277,6 +290,125 @@ export function GameBoard({
     }
   }
 
+  // === P1 GM HANDLERS - Advanced Turn Management ===
+  const handleReverseDirection = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      await reverseTurnDirection(gameId)
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de l\'inversion de direction')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSkipPlayer = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      await skipCurrentPlayer(gameId)
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors du saut de joueur')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handlePassToPlayer = async (targetPlayerId: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      await passToSpecificPlayer(gameId, targetPlayerId)
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors du passage de tour')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // === P1 PLAYER HANDLERS - Advanced Card Actions ===
+  const handleReturnToDeck = async (cardId: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      await returnCardToDeck(gameId, cardId, isGuest ? playerId : undefined)
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors du retour au deck')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGiveToPlayer = async (cardId: string, targetPlayerId: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      await giveCardToPlayer(gameId, cardId, targetPlayerId, isGuest ? playerId : undefined)
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors du don de carte')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleFlipCard = async (cardId: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      await flipCard(gameId, cardId, isGuest ? playerId : undefined)
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors du retournement')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleRevealToAll = async (cardId: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      await revealCardToAll(gameId, cardId, isGuest ? playerId : undefined)
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la révélation')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDrawBottom = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      await drawBottomCard(gameId, isGuest ? playerId : undefined)
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors du tirage du bas')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleTakeFromDiscard = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      await takeFromDiscard(gameId, isGuest ? playerId : undefined)
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la prise de la défausse')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Find standard zones for rendering
   const deckZone = deckConfig.zones.find((z: any) => z.type === 'DECK')
   const discardZone = deckConfig.zones.find((z: any) => z.type === 'DISCARD' || z.type === 'PLAY_AREA')
@@ -445,25 +577,41 @@ export function GameBoard({
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 {hand.map((card: HandCard) => (
-                  <button
-                    key={card.id}
-                    onClick={() => handlePlayCard(card.id)}
-                    disabled={!isMyTurn || loading}
-                    className="group relative aspect-[2/3] rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <CardImage
-                      src={card.imageUrl}
-                      alt={`Carte ${card.position + 1}`}
-                      position={card.position}
+                  <div key={card.id} className="group relative aspect-[2/3] rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-all">
+                    <button
+                      onClick={() => handlePlayCard(card.id)}
+                      disabled={!isMyTurn || loading}
+                      className="absolute inset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <CardImage
+                        src={card.imageUrl}
+                        alt={`Carte ${card.position + 1}`}
+                        position={card.position}
+                      />
+                      {isMyTurn && (
+                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span className="bg-primary text-primary-foreground px-3 py-1 rounded text-sm font-medium">
+                            Jouer
+                          </span>
+                        </div>
+                      )}
+                    </button>
+                    {/* P1: Card Context Menu */}
+                    <CardContextMenu
+                      cardId={card.id}
+                      playerId={playerId}
+                      players={players.map((p: GamePlayerState) => ({
+                        id: p.user_id || p.guest_session_id || '',
+                        name: p.name,
+                      }))}
+                      isMyTurn={isMyTurn}
+                      isGameMaster={isGameMaster}
+                      onReturnToDeck={handleReturnToDeck}
+                      onGiveToPlayer={handleGiveToPlayer}
+                      onFlipCard={handleFlipCard}
+                      onRevealToAll={handleRevealToAll}
                     />
-                    {isMyTurn && (
-                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="bg-primary text-primary-foreground px-3 py-1 rounded text-sm font-medium">
-                          Jouer
-                        </span>
-                      </div>
-                    )}
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -491,6 +639,9 @@ export function GameBoard({
             onNewRound={handleNewRound}
             onRecallCards={handleRecallCards}
             onRandomFirstPlayer={handleRandomFirstPlayer}
+            onReverseDirection={handleReverseDirection}
+            onSkipPlayer={handleSkipPlayer}
+            onPassToPlayer={handlePassToPlayer}
           />
         </aside>
       )}
