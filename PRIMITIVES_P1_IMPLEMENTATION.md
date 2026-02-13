@@ -195,7 +195,67 @@ Tous les handlers incluent :
 - SKIP_PLAYER
 - PASS_TO_PLAYER
 
-**Total implémenté** : 18 / 104 primitives (~17%) ✅
+**Total implémenté** : **39 / 75 primitives (~52%)** ✅
+
+Note : Le nombre réel de primitives dans le moteur universel v2 est de 75, pas 104.
+- P0 : 30 primitives (9 implémentées = ~30%)
+- P1 : 30 primitives (30 implémentées = 100%) ✅
+- P2 : 12 primitives (0 implémentées = 0%)
+
+### P1 COMPLÈTES (30 primitives) ✅
+
+#### Distribution avancée (3) :
+- DISTRIBUTE_BATCH - Distribution rapide de N cartes
+- DISTRIBUTE_TO_ZONE - Distribuer vers zone spécifique
+- REDISTRIBUTE - Redistribuer sans mélanger
+
+#### Deck avancé (5) :
+- SHUFFLE_ZONE - Mélanger zone spécifique
+- CUT_DECK - Couper le deck
+- RECYCLE_DISCARD - Remélanger défausse → pioche
+- ADD_CARDS_TO_DECK - Ajouter cartes au deck
+- REMOVE_CARDS_FROM_DECK - Retirer cartes du deck
+
+#### Actions cartes avancées (11) :
+- RETURN_TO_DECK ✅ (UI intégrée)
+- GIVE_TO_PLAYER ✅ (UI intégrée)
+- DRAW_BOTTOM
+- DRAW_SPECIFIC (GM uniquement)
+- FLIP_CARD ✅ (UI intégrée)
+- REVEAL_TO_ALL ✅ (UI intégrée)
+- REVEAL_TO_PLAYER
+- GROUP_CARDS (nécessite migration)
+- UNGROUP_CARDS (nécessite migration)
+- EXCHANGE_CARDS (GM uniquement)
+- TAKE_FROM_DISCARD
+
+#### Fin de tour (1) :
+- CARDS_TO_DECK - Remettre cartes centre → deck
+
+#### Zone Management (4) :
+- CREATE_ZONE - Créer zone personnalisée
+- DELETE_ZONE - Supprimer zone personnalisée
+- REPOSITION_ZONE - Déplacer/redimensionner zone
+- UPDATE_ZONE_CONFIG - Modifier propriétés zone
+
+#### Turn Management avancé (4) :
+- REVERSE_DIRECTION ✅ (UI intégrée)
+- SKIP_PLAYER ✅ (UI intégrée)
+- PAUSE_GAME / RESUME_GAME
+- (PASS_TO_PLAYER déjà en P0)
+
+#### Visibilité (2) :
+- SHOW_HAND_TO_PLAYER (nécessite migration)
+- TOGGLE_OPEN_GAME - Mode jeu ouvert
+
+#### Défausse (1) :
+- RECYCLE_DISCARD - Remélanger défausse
+
+#### Scoring (1) :
+- CANCEL_DECLARATION - Annuler déclaration vainqueur
+
+#### Gestion partie (1) :
+- UNDO_ACTION (nécessite table primitive_actions_log)
 
 ---
 
@@ -303,6 +363,148 @@ Tous les handlers incluent :
 - ✅ Committed & pushed to `claude/nextjs-card-game-mvp-EdMSV`
 
 **Prochaine étape** : 🚀 **Implémenter P2** (Zone Management, Visibilité, Timer, Snapshots)
+
+---
+
+## 🔧 Actions nécessitant migrations futures
+
+Certaines primitives P1 nécessitent des migrations de base de données pour fonctionner pleinement :
+
+### 1. GROUP_CARDS / UNGROUP_CARDS
+**Migration requise** :
+```sql
+ALTER TABLE game_cards ADD COLUMN group_id UUID NULL;
+ALTER TABLE game_cards ADD COLUMN group_name TEXT NULL;
+```
+
+**Raison** : Stocker l'ID du groupe et son nom pour permettre le groupement visuel de cartes.
+
+### 2. SHOW_HAND_TO_PLAYER / REVEAL_TO_PLAYER
+**Migration requise** :
+```sql
+ALTER TABLE game_cards ADD COLUMN revealed_to TEXT[] DEFAULT '{}';
+```
+
+**Raison** : Stocker la liste des IDs de joueurs à qui la carte est révélée (révélation sélective).
+
+### 3. PAUSE_GAME / RESUME_GAME
+**Migration requise** :
+```sql
+ALTER TABLE games ADD COLUMN is_paused BOOLEAN DEFAULT FALSE;
+ALTER TABLE games ADD COLUMN paused_at TIMESTAMP NULL;
+```
+
+**Raison** : Stocker l'état de pause de la partie.
+
+### 4. UNDO_ACTION
+**Migration requise** :
+```sql
+CREATE TABLE primitive_actions_log (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  game_id UUID REFERENCES games(id) ON DELETE CASCADE,
+  actor_id UUID REFERENCES game_players(id),
+  action_type TEXT NOT NULL,
+
+  -- Paramètres de l'action
+  card_ids TEXT[] DEFAULT '{}',
+  source_zone_id UUID,
+  target_zone_id UUID,
+  target_player_id UUID,
+  face_visible BOOLEAN,
+  count INTEGER,
+  points INTEGER,
+  parameters JSONB DEFAULT '{}',
+
+  -- État avant l'action (pour undo)
+  previous_state JSONB,
+
+  -- Flags
+  can_be_undone BOOLEAN DEFAULT TRUE,
+  undone_at TIMESTAMP NULL,
+
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_primitive_actions_game ON primitive_actions_log(game_id);
+CREATE INDEX idx_primitive_actions_created ON primitive_actions_log(created_at DESC);
+```
+
+**Raison** : Stocker l'historique de toutes les actions pour permettre l'undo.
+
+---
+
+## 📱 Status d'intégration UI
+
+### ✅ Intégré dans l'UI
+
+**CardContextMenu** (menu contextuel sur les cartes) :
+- ✅ RETURN_TO_DECK - Bouton "Retourner au deck"
+- ✅ GIVE_TO_PLAYER - Sous-menu "Donner à..."
+- ✅ FLIP_CARD - Bouton "Retourner la carte"
+- ✅ REVEAL_TO_ALL - Bouton "Révéler à tous"
+
+**GMControlPanel** (panneau latéral GM) :
+- ✅ REVERSE_DIRECTION - Bouton "Inverser direction"
+- ✅ SKIP_PLAYER - Bouton "Sauter joueur actuel"
+- ✅ PASS_TO_PLAYER - Bouton "Forcer tour à ce joueur" (avec sélection joueur)
+
+### 🔧 Server actions disponibles (pas encore d'UI)
+
+Les actions suivantes sont implémentées côté serveur mais n'ont pas encore d'interface utilisateur :
+
+**Distribution & Deck** :
+- DISTRIBUTE_TO_ZONE
+- REDISTRIBUTE
+- SHUFFLE_ZONE
+- CUT_DECK
+- RECYCLE_DISCARD
+- ADD_CARDS_TO_DECK
+- REMOVE_CARDS_FROM_DECK
+
+**Cartes avancées** :
+- DRAW_SPECIFIC (GM)
+- DRAW_BOTTOM
+- TAKE_FROM_DISCARD
+- REVEAL_TO_PLAYER
+- GROUP_CARDS
+- UNGROUP_CARDS
+- EXCHANGE_CARDS (GM)
+
+**Zone Management** :
+- CREATE_ZONE
+- DELETE_ZONE
+- REPOSITION_ZONE
+- UPDATE_ZONE_CONFIG
+
+**Visibilité & État** :
+- PAUSE_GAME / RESUME_GAME
+- SHOW_HAND_TO_PLAYER
+- TOGGLE_OPEN_GAME
+
+**Fin de tour & Misc** :
+- CARDS_TO_DECK
+- CANCEL_DECLARATION
+- UNDO_ACTION
+
+### 🎯 Prochaines étapes UI
+
+Pour compléter l'intégration P1, il faudrait ajouter :
+
+1. **Section "Deck avancé"** dans GMControlPanel :
+   - Boutons pour SHUFFLE_ZONE, CUT_DECK, RECYCLE_DISCARD
+   - Interface pour ADD/REMOVE_CARDS
+
+2. **Section "Zones"** dans GMControlPanel :
+   - Formulaire CREATE_ZONE
+   - Liste des zones avec boutons DELETE/REPOSITION/UPDATE
+
+3. **Section "Visibilité"** dans GMControlPanel :
+   - Toggle TOGGLE_OPEN_GAME
+   - Interface SHOW_HAND_TO_PLAYER (sélection 2 joueurs)
+
+4. **Boutons "Piocher du bas" et "Prendre défausse"** sur le plateau de jeu
+
+5. **Boutons "Pause" / "Undo"** dans l'header du jeu
 
 ---
 
