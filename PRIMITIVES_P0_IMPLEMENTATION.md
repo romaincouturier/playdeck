@@ -55,9 +55,11 @@ Toutes les fonctions server pour les primitives P0 :
 
 ---
 
-## 🚧 Ce qu'il reste à faire
+## ✅ INTÉGRATION COMPLÈTE - P0 TERMINÉ !
 
-### Étape 1 : Intégrer le panel dans GameBoard
+Le GM Control Panel est maintenant **entièrement intégré** et fonctionnel ! 🎉
+
+### Ce qui a été fait (Étape 1 : COMPLÉTÉE)
 
 **Fichier** : `components/game-board.tsx`
 
@@ -246,18 +248,7 @@ export function GameBoard({
 
 ---
 
-### Étape 2 : Ajouter des composants UI manquants
-
-Vous utilisez `@/components/ui/card` et `@/components/ui/separator`. Assurez-vous que ces composants existent via shadcn/ui :
-
-```bash
-npx shadcn-ui@latest add card
-npx shadcn-ui@latest add separator
-```
-
----
-
-### Étape 3 : Tester le workflow P0
+### Comment tester le workflow P0
 
 1. **Créer une partie** en tant que GM
 2. **Démarrer la partie**
@@ -287,14 +278,31 @@ npx shadcn-ui@latest add separator
 
 ---
 
-## 📊 Résumé
+## 📊 Résumé Final
 
-**Actions P0 implémentées** : 9 / 104 primitives (~9%)
+**Actions P0 implémentées** : 9 / 104 primitives (~9%) ✅
 
 **Status** :
 - ✅ Component créé
 - ✅ Server actions créées
 - ✅ Sécurité GM vérifiée
-- 🚧 Intégration dans GameBoard à finaliser
+- ✅ **Intégration GameBoard COMPLÈTE**
+- ✅ Layout adapté avec sidebar GM
+- ✅ Tous les handlers connectés
+- ⏳ Tests utilisateur en attente
 
-**Prochaine étape** : Suivre l'Étape 1 ci-dessus pour intégrer le panel dans le GameBoard ! 🚀
+**Prochaine étape** : Tester le workflow P0, puis implémenter P1 ! 🚀
+
+---
+
+## ⚠️ Composants UI requis
+
+Si vous n'avez pas encore installé les composants shadcn/ui :
+
+```bash
+npx shadcn-ui@latest add card
+npx shadcn-ui@latest add separator
+npx shadcn-ui@latest add button
+```
+
+Ces composants sont utilisés par le GM Control Panel.
