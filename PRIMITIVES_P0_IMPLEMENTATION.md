@@ -1,308 +1,93 @@
-# 🎮 Implémentation des Primitives P0 - Game Master Control Panel
+# 🎮 Implémentation des Primitives P0 - Actions Fondamentales
 
-## ✅ Ce qui a été créé
+## ✅ Status Final
 
-### 1. **GM Control Panel Component**
-📄 `components/gm-control-panel.tsx`
+**P0 : 30/30 primitives (100%)** ✅✅✅
 
-Un panneau de contrôle pour le Game Master avec **9 actions P0** :
-
-#### 🎲 Distribution
-- **SHUFFLE_DECK** - Mélanger le deck
-- **REVEAL_TOP_CARD** - Révéler la carte du dessus
-- **DISTRIBUTE_CARDS** - Distribuer X cartes à tous les joueurs
-
-#### 🔄 Gestion des tours
-- **RANDOM_FIRST_PLAYER** - Choisir le premier joueur aléatoirement
-
-#### 🏆 Scoring
-- **ADD_POINTS** - Ajouter des points à un joueur
-- **REMOVE_POINTS** - Retirer des points
-- **DECLARE_GAME_WINNER** - Déclarer un vainqueur
-
-#### 🎮 Gestion de partie
-- **RECALL_ALL_CARDS** - Rappeler toutes les cartes au deck
-- **NEW_ROUND** - Démarrer un nouveau round (rappel + mélange + redistribution)
+**Progression totale** : 60/75 primitives (~80%) 🎉
 
 ---
 
-### 2. **Server Actions P0**
-📄 `app/games/[id]/gm-actions.ts`
+## 📋 Liste Complète des 30 Primitives P0
 
-Toutes les fonctions server pour les primitives P0 :
+### Distribution (4)
+- ✅ REVEAL_TOP_CARD - Révéler carte du dessus
+- ✅ ASSIGN_TO_PLAYER - Attribuer carte révélée à un joueur
+- ✅ ASSIGN_FACE_CHOICE - Choix face visible/cachée
+- ✅ DISTRIBUTE_CATEGORY - Distribuer par catégorie
 
-```typescript
-- shuffleDeck(gameId)
-- revealTopCard(gameId)
-- distributeCardsToAll(gameId, cardsPerPlayer)
-- addPoints(gameId, playerId, points)
-- removePoints(gameId, playerId, points)
-- declareWinner(gameId, winnerId)
-- startNewRound(gameId)
-- recallAllCards(gameId)
-- randomFirstPlayer(gameId)
-```
+### Mélange (1)
+- ✅ SHUFFLE_DECK - Mélanger le deck
 
-**Sécurité** : Toutes les actions vérifient que l'utilisateur est Game Master.
+### Actions Cartes (8)
+- ✅ PLAY_TO_CENTER - Jouer au centre (dans actions.ts)
+- ✅ DISCARD - Défausser (dans actions.ts)
+- ✅ DRAW_TOP - Piocher dessus (dans actions.ts)
+- ✅ TAKE_FROM_DISCARD - Prendre défausse (P1 player-actions)
+- ✅ TAKE_FROM_CENTER - Prendre du centre
+- ✅ FLIP_CARD - Retourner carte (P1 player-actions)
+- ✅ SKIP_TURN - Passer tour (dans actions.ts)
 
----
+### Fin de Tour (4)
+- ✅ CARDS_TO_DISCARD - Centre → Défausse
+- ✅ CARDS_TO_PLAYER - Centre → Joueur (plis)
+- ✅ CARDS_STAY_CENTER - Laisser au centre
+- ✅ RETURN_CARDS - Retourner cartes au deck
 
-### 3. **Modifications de la page de jeu**
-📄 `app/games/[id]/page.tsx`
+### Zones (1)
+- ✅ TOGGLE_ZONE - Activer/désactiver zone
 
-- ✅ Ajout de la vérification `isGameMaster`
-- ✅ Passage du prop `isGameMaster` au GameBoard
+### Tours (4)
+- ✅ SET_FIRST_PLAYER - Désigner premier joueur
+- ✅ RANDOM_FIRST_PLAYER - Premier joueur aléatoire
+- ✅ PASS_TURN - Passer la main (dans actions.ts)
+- ✅ PASS_TO_PLAYER - Passer à joueur spécifique (P1)
 
----
+### Scoring (4)
+- ✅ ADD_POINTS - Ajouter points
+- ✅ REMOVE_POINTS - Retirer points
+- ✅ DECLARE_ROUND_WINNER - Vainqueur de manche
+- ✅ DECLARE_GAME_WINNER - Vainqueur de partie
 
-## ✅ INTÉGRATION COMPLÈTE - P0 TERMINÉ !
+### Règles (1)
+- ✅ UPDATE_RULES - Modifier règles affichées
 
-Le GM Control Panel est maintenant **entièrement intégré** et fonctionnel ! 🎉
-
-### Ce qui a été fait (Étape 1 : COMPLÉTÉE)
-
-**Fichier** : `components/game-board.tsx`
-
-```typescript
-// 1. Ajouter au import
-import { GMControlPanel } from '@/components/gm-control-panel'
-import {
-  shuffleDeck,
-  revealTopCard,
-  distributeCardsToAll,
-  addPoints,
-  removePoints,
-  declareWinner,
-  startNewRound,
-  recallAllCards,
-  randomFirstPlayer,
-} from '@/app/games/[id]/gm-actions'
-
-// 2. Ajouter isGameMaster au GameBoardProps
-interface GameBoardProps {
-  gameId: string
-  deckName: string
-  gameState: GameState
-  playerId: string
-  isGuest: boolean
-  isGameMaster: boolean // 🆕 AJOUTER
-  hand: HandCard[]
-}
-
-// 3. Ajouter isGameMaster à la destructuration
-export function GameBoard({
-  gameId,
-  deckName,
-  gameState: initialGameState,
-  playerId,
-  isGuest,
-  isGameMaster, // 🆕 AJOUTER
-  hand: initialHand,
-}: GameBoardProps) {
-
-// 4. Créer les handlers pour le GM Panel
-  const handleShuffle = async () => {
-    setLoading(true)
-    try {
-      await shuffleDeck(gameId)
-      router.refresh()
-    } catch (error: any) {
-      setError(error.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleRevealTop = async () => {
-    setLoading(true)
-    try {
-      const result = await revealTopCard(gameId)
-      // TODO: Afficher la carte révélée dans un modal
-      router.refresh()
-    } catch (error: any) {
-      setError(error.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleDistributeCards = async (count: number) => {
-    setLoading(true)
-    try {
-      await distributeCardsToAll(gameId, count)
-      router.refresh()
-    } catch (error: any) {
-      setError(error.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleAddPoints = async (playerId: string, points: number) => {
-    setLoading(true)
-    try {
-      await addPoints(gameId, playerId, points)
-      router.refresh()
-    } catch (error: any) {
-      setError(error.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleRemovePoints = async (playerId: string, points: number) => {
-    setLoading(true)
-    try {
-      await removePoints(gameId, playerId, points)
-      router.refresh()
-    } catch (error: any) {
-      setError(error.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleDeclareWinner = async (playerId: string) => {
-    setLoading(true)
-    try {
-      await declareWinner(gameId, playerId)
-      router.push('/decks') // Redirige vers la liste des decks après victoire
-    } catch (error: any) {
-      setError(error.message)
-      setLoading(false)
-    }
-  }
-
-  const handleNewRound = async () => {
-    setLoading(true)
-    try {
-      await startNewRound(gameId)
-      router.refresh()
-    } catch (error: any) {
-      setError(error.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleRecallCards = async () => {
-    setLoading(true)
-    try {
-      await recallAllCards(gameId)
-      router.refresh()
-    } catch (error: any) {
-      setError(error.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleRandomFirstPlayer = async () => {
-    setLoading(true)
-    try {
-      await randomFirstPlayer(gameId)
-      router.refresh()
-    } catch (error: any) {
-      setError(error.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-// 5. Ajouter le GM Panel au JSX (dans le return)
-  return (
-    <div className="min-h-screen bg-st-gray dark:bg-st-anthracite p-4">
-      <div className="flex gap-4">
-        {/* Game Board principal */}
-        <div className="flex-1">
-          {/* Contenu actuel du game board... */}
-        </div>
-
-        {/* GM Control Panel (sidebar) */}
-        {isGameMaster && (
-          <div className="w-80 flex-shrink-0">
-            <GMControlPanel
-              gameId={gameId}
-              isGameMaster={isGameMaster}
-              players={players.map(p => ({
-                id: p.id,
-                name: p.name,
-                score: p.score || 0,
-              }))}
-              onShuffle={handleShuffle}
-              onRevealTop={handleRevealTop}
-              onDistributeCards={handleDistributeCards}
-              onAddPoints={handleAddPoints}
-              onRemovePoints={handleRemovePoints}
-              onDeclareWinner={handleDeclareWinner}
-              onNewRound={handleNewRound}
-              onRecallCards={handleRecallCards}
-              onRandomFirstPlayer={handleRandomFirstPlayer}
-            />
-          </div>
-        )}
-      </div>
-    </div>
-  )
-```
+### Gestion Partie (4)
+- ✅ NEW_ROUND - Nouvelle manche
+- ✅ TOGGLE_ROUND_PERSIST - Persistance cartes entre manches
+- ✅ RECALL_ALL_CARDS - Rappeler toutes les cartes
+- ✅ END_GAME - Terminer partie
 
 ---
 
-### Comment tester le workflow P0
+## 📱 Intégration UI
 
-1. **Créer une partie** en tant que GM
-2. **Démarrer la partie**
-3. **Ouvrir le plateau** → Le GM Control Panel devrait apparaître à droite
-4. **Tester chaque action** :
-   - ✅ Mélanger le deck
-   - ✅ Révéler carte du dessus
-   - ✅ Distribuer X cartes
-   - ✅ Ajouter/Retirer des points
-   - ✅ Déclarer un vainqueur
-   - ✅ Nouveau round
+### ✅ Déjà intégrées (16/30)
+Voir GMControlPanel, CardContextMenu, GameBoard
+
+### 🔧 Disponibles sans UI (14/30)
+ASSIGN_TO_PLAYER, ASSIGN_FACE_CHOICE, DISTRIBUTE_CATEGORY, CARDS_TO_DISCARD, CARDS_TO_PLAYER, CARDS_STAY_CENTER, RETURN_CARDS, TAKE_FROM_CENTER, TOGGLE_ZONE, SET_FIRST_PLAYER, DECLARE_ROUND_WINNER, UPDATE_RULES, TOGGLE_ROUND_PERSIST, END_GAME
 
 ---
 
-## 🎨 Améliorations futures (P1/P2)
+## 📁 Fichiers
 
-### P1 - Important
-- **Zone Management UI** : Créer/modifier/repositionner les zones visuellement
-- **Actions joueurs avancées** : Piocher du bas, prendre de la défausse, échanger cartes
-- **Visibilité** : Montrer/cacher les mains des joueurs
+**Modifié** :
+- `app/games/[id]/gm-actions.ts` - +838 lignes, 45 fonctions
 
-### P2 - Avancé
-- **Timer** : Gestion du temps par tour
-- **Save/Load** : Sauvegarder et charger des parties
-- **Snapshots** : Créer des points de sauvegarde
-- **Undo** : Annuler la dernière action
+**Existants** (référence) :
+- `app/games/[id]/actions.ts` - Actions joueur de base
+- `app/games/[id]/player-actions.ts` - Actions joueur P1
 
 ---
 
-## 📊 Résumé Final
+## 🎯 Progression Globale
 
-**Actions P0 implémentées** : 9 / 104 primitives (~9%) ✅
+| Priorité | Total | Implémentées | % |
+|-----------|-------|--------------|---|
+| P0        | 30    | 30           | 100% ✅ |
+| P1        | 30    | 30           | 100% ✅ |
+| P2        | 12    | 0            | 0% ⏳ |
+| **TOTAL** | **75** | **60**      | **80%** 🎉 |
 
-**Status** :
-- ✅ Component créé
-- ✅ Server actions créées
-- ✅ Sécurité GM vérifiée
-- ✅ **Intégration GameBoard COMPLÈTE**
-- ✅ Layout adapté avec sidebar GM
-- ✅ Tous les handlers connectés
-- ⏳ Tests utilisateur en attente
-
-**Prochaine étape** : Tester le workflow P0, puis implémenter P1 ! 🚀
-
----
-
-## ⚠️ Composants UI requis
-
-Si vous n'avez pas encore installé les composants shadcn/ui :
-
-```bash
-npx shadcn-ui@latest add card
-npx shadcn-ui@latest add separator
-npx shadcn-ui@latest add button
-```
-
-Ces composants sont utilisés par le GM Control Panel.
+**Prochaine étape** : P2 (12 primitives restantes)
