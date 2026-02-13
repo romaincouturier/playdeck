@@ -1642,3 +1642,841 @@ export async function undoAction(gameId: string) {
     message: 'Fonction UNDO nécessite la table primitive_actions_log (migration future)',
   }
 }
+'use server'
+
+import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
+
+// ============================================================================
+// P0 PRIMITIVES SUPPLÉMENTAIRES
+// ============================================================================
+
+// ===== DISTRIBUTION P0 =====
+
+/**
+ * P0: ASSIGN_TO_PLAYER
+ * Attribue la carte révélée du dessus du deck à un joueur spécifique
+ */
+export async function assignToPlayer(gameId: string, playerId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut attribuer des cartes')
+  }
+
+  // Récupérer la zone DECK
+  const { data: deckZone } = await supabase
+    .from('zones')
+    .select('id')
+    .eq('game_id', gameId)
+    .eq('type', 'DECK')
+    .single()
+
+  if (!deckZone) {
+    throw new Error('Zone DECK introuvable')
+  }
+
+  // Récupérer la carte du dessus
+  const { data: topCard } = await supabase
+    .from('game_cards')
+    .select('*')
+    .eq('zone_id', deckZone.id)
+    .order('position')
+    .limit(1)
+    .single()
+
+  if (!topCard) {
+    throw new Error('Le deck est vide')
+  }
+
+  // Récupérer la zone HAND du joueur cible
+  const { data: handZone } = await supabase
+    .from('zones')
+    .select('id')
+    .eq('game_id', gameId)
+    .eq('type', 'HAND')
+    .eq('owner_player_id', playerId)
+    .single()
+
+  if (!handZone) {
+    throw new Error('Zone HAND du joueur introuvable')
+  }
+
+  // Trouver la position max dans la main
+  const { data: maxPos } = await supabase
+    .from('game_cards')
+    .select('position')
+    .eq('zone_id', handZone.id)
+    .order('position', { ascending: false })
+    .limit(1)
+    .single()
+
+  const newPosition = (maxPos?.position || -1) + 1
+
+  // Déplacer la carte
+  await supabase
+    .from('game_cards')
+    .update({
+      zone_id: handZone.id,
+      owner_id: playerId,
+      position: newPosition,
+      face_visible: false,
+    })
+    .eq('id', topCard.id)
+
+  revalidatePath(`/games/${gameId}`)
+  return { success: true, message: 'Carte attribuée au joueur' }
+}
+
+/**
+ * P0: ASSIGN_FACE_CHOICE
+ * Configure si les cartes distribuées seront face visible ou cachée
+ */
+export async function assignFaceChoice(gameId: string, faceVisible: boolean) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id, settings')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut modifier les paramètres de distribution')
+  }
+
+  // Mettre à jour les settings
+  const settings = (game.settings as any) || {}
+  settings.distribute_face_visible = faceVisible
+
+  await supabase.from('games').update({ settings }).eq('id', gameId)
+
+  revalidatePath(`/games/${gameId}`)
+  return {
+    success: true,
+    message: faceVisible
+      ? 'Distribution face visible activée'
+      : 'Distribution face cachée activée',
+  }
+}
+
+/**
+ * P0: DISTRIBUTE_CATEGORY
+ * Distribue uniquement les cartes d'une catégorie spécifique
+ */
+export async function distributeCategory(
+  gameId: string,
+  categoryId: string,
+  cardsPerPlayer: number
+) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut distribuer des cartes')
+  }
+
+  // Récupérer tous les joueurs
+  const { data: players } = await supabase
+    .from('game_players')
+    .select('id')
+    .eq('game_id', gameId)
+    .eq('role', 'PLAYER')
+    .order('player_order')
+
+  if (!players || players.length === 0) {
+    throw new Error('Aucun joueur dans la partie')
+  }
+
+  // Récupérer la zone DECK
+  const { data: deckZone } = await supabase
+    .from('zones')
+    .select('id')
+    .eq('game_id', gameId)
+    .eq('type', 'DECK')
+    .single()
+
+  if (!deckZone) {
+    throw new Error('Zone DECK introuvable')
+  }
+
+  // Récupérer les cartes de la catégorie
+  const { data: categoryCards } = await supabase
+    .from('game_cards')
+    .select('*')
+    .eq('zone_id', deckZone.id)
+    .eq('card_type_id', categoryId)
+    .order('position')
+    .limit(players.length * cardsPerPlayer)
+
+  if (!categoryCards || categoryCards.length < players.length * cardsPerPlayer) {
+    throw new Error(
+      `Pas assez de cartes de cette catégorie (${categoryCards?.length || 0}/${
+        players.length * cardsPerPlayer
+      })`
+    )
+  }
+
+  // Distribuer
+  let cardIndex = 0
+  for (const player of players) {
+    const { data: handZone } = await supabase
+      .from('zones')
+      .select('id')
+      .eq('game_id', gameId)
+      .eq('type', 'HAND')
+      .eq('owner_player_id', player.id)
+      .single()
+
+    if (!handZone) continue
+
+    for (let i = 0; i < cardsPerPlayer && cardIndex < categoryCards.length; i++) {
+      const card = categoryCards[cardIndex++]
+
+      await supabase
+        .from('game_cards')
+        .update({
+          zone_id: handZone.id,
+          owner_id: player.id,
+          position: i,
+        })
+        .eq('id', card.id)
+    }
+  }
+
+  revalidatePath(`/games/${gameId}`)
+  return {
+    success: true,
+    message: `${cardsPerPlayer} cartes de la catégorie distribuées`,
+  }
+}
+
+// ===== ACTIONS CARTES P0 =====
+
+/**
+ * P0: TAKE_FROM_CENTER
+ * Prendre une carte du centre vers sa main
+ */
+export async function takeFromCenter(gameId: string, cardId: string, guestSessionId?: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const session = guestSessionId
+  const playerId = user?.id || session
+
+  if (!playerId) {
+    throw new Error('Non authentifié')
+  }
+
+  // Récupérer le joueur
+  const { data: player } = await supabase
+    .from('game_players')
+    .select('id')
+    .eq('game_id', gameId)
+    .or(`user_id.eq.${user?.id},guest_session_id.eq.${session}`)
+    .single()
+
+  if (!player) {
+    throw new Error('Joueur introuvable')
+  }
+
+  // Récupérer la zone HAND
+  const { data: handZone } = await supabase
+    .from('zones')
+    .select('id')
+    .eq('game_id', gameId)
+    .eq('type', 'HAND')
+    .eq('owner_player_id', player.id)
+    .single()
+
+  if (!handZone) {
+    throw new Error('Zone HAND introuvable')
+  }
+
+  // Trouver la position max
+  const { data: maxPos } = await supabase
+    .from('game_cards')
+    .select('position')
+    .eq('zone_id', handZone.id)
+    .order('position', { ascending: false })
+    .limit(1)
+    .single()
+
+  const newPosition = (maxPos?.position || -1) + 1
+
+  // Déplacer la carte
+  await supabase
+    .from('game_cards')
+    .update({
+      zone_id: handZone.id,
+      owner_id: player.id,
+      position: newPosition,
+    })
+    .eq('id', cardId)
+
+  revalidatePath(`/games/${gameId}`)
+  return { success: true }
+}
+
+// ... (Suite dans le prochain message car fichier trop long)
+'use server'
+
+import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
+
+// ===== FIN DE TOUR P0 =====
+
+/**
+ * P0: CARDS_TO_DISCARD
+ * Envoie toutes les cartes du centre vers la défausse
+ */
+export async function cardsToDiscard(gameId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut déplacer les cartes')
+  }
+
+  // Récupérer les zones
+  const { data: centerZone } = await supabase
+    .from('zones')
+    .select('id')
+    .eq('game_id', gameId)
+    .eq('type', 'CENTER')
+    .single()
+
+  const { data: discardZone } = await supabase
+    .from('zones')
+    .select('id')
+    .eq('game_id', gameId)
+    .eq('type', 'DISCARD')
+    .single()
+
+  if (!centerZone || !discardZone) {
+    throw new Error('Zones CENTER ou DISCARD introuvables')
+  }
+
+  // Récupérer les cartes du centre
+  const { data: centerCards } = await supabase.from('game_cards').select('id').eq('zone_id', centerZone.id)
+
+  if (!centerCards || centerCards.length === 0) {
+    return { success: true, message: 'Aucune carte au centre' }
+  }
+
+  // Trouver position max dans défausse
+  const { data: maxPos } = await supabase
+    .from('game_cards')
+    .select('position')
+    .eq('zone_id', discardZone.id)
+    .order('position', { ascending: false })
+    .limit(1)
+    .single()
+
+  let newPosition = (maxPos?.position || -1) + 1
+
+  // Déplacer toutes les cartes
+  for (const card of centerCards) {
+    await supabase
+      .from('game_cards')
+      .update({
+        zone_id: discardZone.id,
+        owner_id: null,
+        position: newPosition++,
+        face_visible: true,
+      })
+      .eq('id', card.id)
+  }
+
+  revalidatePath(`/games/${gameId}`)
+  return { success: true, message: `${centerCards.length} cartes envoyées à la défausse` }
+}
+
+/**
+ * P0: CARDS_TO_PLAYER
+ * Attribue toutes les cartes du centre à un joueur (plis)
+ */
+export async function cardsToPlayer(gameId: string, playerId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut attribuer les cartes')
+  }
+
+  const { data: centerZone } = await supabase
+    .from('zones')
+    .select('id')
+    .eq('game_id', gameId)
+    .eq('type', 'CENTER')
+    .single()
+
+  if (!centerZone) {
+    throw new Error('Zone CENTER introuvable')
+  }
+
+  const { data: centerCards } = await supabase.from('game_cards').select('id').eq('zone_id', centerZone.id)
+
+  if (!centerCards || centerCards.length === 0) {
+    return { success: true, message: 'Aucune carte au centre' }
+  }
+
+  // Créer ou récupérer zone TRICK
+  let { data: trickZone } = await supabase
+    .from('zones')
+    .select('id')
+    .eq('game_id', gameId)
+    .eq('type', 'TRICK')
+    .eq('owner_player_id', playerId)
+    .single()
+
+  if (!trickZone) {
+    const { data: newZone } = await supabase
+      .from('zones')
+      .insert({
+        game_id: gameId,
+        name: 'Plis gagnés',
+        type: 'TRICK',
+        visibility: 'PRIVATE',
+        default_face: 'DOWN',
+        is_ordered: true,
+        owner_player_id: playerId,
+        is_enabled: true,
+      })
+      .select()
+      .single()
+
+    trickZone = newZone
+  }
+
+  if (!trickZone) {
+    throw new Error('Impossible de créer la zone TRICK')
+  }
+
+  const { data: maxPos } = await supabase
+    .from('game_cards')
+    .select('position')
+    .eq('zone_id', trickZone.id)
+    .order('position', { ascending: false })
+    .limit(1)
+    .single()
+
+  let newPosition = (maxPos?.position || -1) + 1
+
+  for (const card of centerCards) {
+    await supabase
+      .from('game_cards')
+      .update({
+        zone_id: trickZone.id,
+        owner_id: playerId,
+        position: newPosition++,
+        face_visible: false,
+      })
+      .eq('id', card.id)
+  }
+
+  revalidatePath(`/games/${gameId}`)
+  return { success: true, message: `${centerCards.length} cartes attribuées (pli)` }
+}
+
+/**
+ * P0: CARDS_STAY_CENTER
+ * Laisse les cartes au centre (action de confirmation)
+ */
+export async function cardsStayCenter(gameId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut décider')
+  }
+
+  revalidatePath(`/games/${gameId}`)
+  return { success: true, message: 'Les cartes restent au centre' }
+}
+
+/**
+ * P0: RETURN_CARDS
+ * Le joueur rend les cartes reçues ce tour
+ */
+export async function returnCards(gameId: string, playerId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: handZone } = await supabase
+    .from('zones')
+    .select('id')
+    .eq('game_id', gameId)
+    .eq('type', 'HAND')
+    .eq('owner_player_id', playerId)
+    .single()
+
+  if (!handZone) {
+    throw new Error('Zone HAND introuvable')
+  }
+
+  const { data: deckZone } = await supabase
+    .from('zones')
+    .select('id')
+    .eq('game_id', gameId)
+    .eq('type', 'DECK')
+    .single()
+
+  if (!deckZone) {
+    throw new Error('Zone DECK introuvable')
+  }
+
+  const { data: handCards } = await supabase.from('game_cards').select('id').eq('zone_id', handZone.id)
+
+  if (!handCards || handCards.length === 0) {
+    return { success: true, message: 'Aucune carte à retourner' }
+  }
+
+  const { data: maxPos } = await supabase
+    .from('game_cards')
+    .select('position')
+    .eq('zone_id', deckZone.id)
+    .order('position', { ascending: false })
+    .limit(1)
+    .single()
+
+  let newPosition = (maxPos?.position || -1) + 1
+
+  for (const card of handCards) {
+    await supabase
+      .from('game_cards')
+      .update({
+        zone_id: deckZone.id,
+        owner_id: null,
+        position: newPosition++,
+        face_visible: false,
+      })
+      .eq('id', card.id)
+  }
+
+  revalidatePath(`/games/${gameId}`)
+  return { success: true, message: `${handCards.length} cartes retournées au deck` }
+}
+
+// ===== ZONES P0 =====
+
+/**
+ * P0: TOGGLE_ZONE
+ * Active ou désactive une zone
+ */
+export async function toggleZone(gameId: string, zoneId: string, enabled: boolean) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut activer/désactiver les zones')
+  }
+
+  await supabase.from('zones').update({ is_enabled: enabled }).eq('id', zoneId)
+
+  revalidatePath(`/games/${gameId}`)
+  return {
+    success: true,
+    message: enabled ? 'Zone activée' : 'Zone désactivée',
+  }
+}
+
+// ===== TOURS P0 =====
+
+/**
+ * P0: SET_FIRST_PLAYER
+ * Désigne manuellement le premier joueur
+ */
+export async function setFirstPlayer(gameId: string, playerId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut désigner le premier joueur')
+  }
+
+  const { data: turnState } = await supabase
+    .from('turn_state')
+    .select('turn_order')
+    .eq('game_id', gameId)
+    .single()
+
+  if (!turnState || !turnState.turn_order.includes(playerId)) {
+    throw new Error('Joueur introuvable dans la partie')
+  }
+
+  await supabase.from('turn_state').update({ current_player_id: playerId }).eq('game_id', gameId)
+
+  revalidatePath(`/games/${gameId}`)
+  return { success: true, message: 'Premier joueur désigné' }
+}
+
+// ===== SCORING P0 =====
+
+/**
+ * P0: DECLARE_ROUND_WINNER
+ * Déclare le vainqueur de la manche
+ */
+export async function declareRoundWinner(gameId: string, playerId: string, points?: number) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut déclarer un vainqueur de manche')
+  }
+
+  if (points && points > 0) {
+    const { data: player } = await supabase
+      .from('game_players')
+      .select('score')
+      .eq('id', playerId)
+      .single()
+
+    const newScore = (player?.score || 0) + points
+
+    await supabase.from('game_players').update({ score: newScore }).eq('id', playerId)
+  }
+
+  revalidatePath(`/games/${gameId}`)
+  return {
+    success: true,
+    message: `Vainqueur de la manche déclaré${points ? ` (+${points} points)` : ''}`,
+  }
+}
+
+// ===== RÈGLES P0 =====
+
+/**
+ * P0: UPDATE_RULES
+ * Modifie les règles affichées
+ */
+export async function updateRules(gameId: string, rulesMarkdown: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id, settings')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut modifier les règles')
+  }
+
+  const settings = (game.settings as any) || {}
+  settings.rules_text = rulesMarkdown
+
+  await supabase.from('games').update({ settings }).eq('id', gameId)
+
+  revalidatePath(`/games/${gameId}`)
+  return { success: true, message: 'Règles mises à jour' }
+}
+
+// ===== GESTION PARTIE P0 =====
+
+/**
+ * P0: TOGGLE_ROUND_PERSIST
+ * Active/désactive la persistance des cartes entre manches
+ */
+export async function toggleRoundPersist(gameId: string, persist: boolean) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id, settings')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut modifier ce paramètre')
+  }
+
+  const settings = (game.settings as any) || {}
+  settings.round_persist = persist
+
+  await supabase.from('games').update({ settings }).eq('id', gameId)
+
+  revalidatePath(`/games/${gameId}`)
+  return {
+    success: true,
+    message: persist
+      ? 'Les cartes seront conservées entre les manches'
+      : 'Les cartes seront effacées entre les manches',
+  }
+}
+
+/**
+ * P0: END_GAME
+ * Termine la partie immédiatement
+ */
+export async function endGame(gameId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut terminer la partie')
+  }
+
+  await supabase
+    .from('games')
+    .update({
+      status: 'finished',
+      finished_at: new Date().toISOString(),
+    })
+    .eq('id', gameId)
+
+  revalidatePath(`/games/${gameId}`)
+  return { success: true, message: 'Partie terminée' }
+}
