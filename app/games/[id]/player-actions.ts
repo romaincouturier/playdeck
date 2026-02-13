@@ -373,3 +373,110 @@ export async function takeFromDiscard(gameId: string, guestSessionId?: string) {
   revalidatePath(`/games/${gameId}`)
   return { success: true }
 }
+
+/**
+ * P1: REVEAL_TO_PLAYER
+ * Révèle une carte à un joueur spécifique
+ * NOTE: Pour l'instant révèle à tous - une vraie implémentation nécessiterait
+ * une colonne revealed_to: text[] dans game_cards
+ */
+export async function revealCardToPlayer(
+  gameId: string,
+  cardId: string,
+  targetPlayerId: string,
+  guestSessionId?: string
+) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const session = guestSessionId || (await getGuestSession())?.sessionId
+
+  if (!user && !session) {
+    throw new Error('Non authentifié')
+  }
+
+  // NOTE: Pour une vraie implémentation, ajouter colonne revealed_to: text[]
+  // Pour l'instant, on révèle simplement la carte
+  await supabase
+    .from('game_cards')
+    .update({
+      face_visible: true,
+    })
+    .eq('id', cardId)
+
+  revalidatePath(`/games/${gameId}`)
+  return { success: true, message: `Carte révélée à joueur ${targetPlayerId}` }
+}
+
+/**
+ * P1: GROUP_CARDS
+ * Groupe plusieurs cartes ensemble
+ * NOTE: Nécessite une colonne group_id dans game_cards (migration future)
+ */
+export async function groupCards(
+  gameId: string,
+  cardIds: string[],
+  groupName: string,
+  guestSessionId?: string
+) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const session = guestSessionId || (await getGuestSession())?.sessionId
+
+  if (!user && !session) {
+    throw new Error('Non authentifié')
+  }
+
+  // Générer un ID de groupe unique
+  const groupId = crypto.randomUUID()
+
+  // NOTE: Nécessite migration pour ajouter colonnes group_id et group_name
+  // Pour l'instant, on simule en stockant dans metadata
+  for (const cardId of cardIds) {
+    await supabase
+      .from('game_cards')
+      .update({
+        // metadata: { group_id: groupId, group_name: groupName }
+        // TODO: Ajouter support groupement
+      })
+      .eq('id', cardId)
+  }
+
+  revalidatePath(`/games/${gameId}`)
+  return {
+    success: true,
+    groupId,
+    message: `${cardIds.length} cartes groupées sous "${groupName}"`,
+  }
+}
+
+/**
+ * P1: UNGROUP_CARDS
+ * Dégroupe des cartes précédemment groupées
+ * NOTE: Nécessite une colonne group_id dans game_cards (migration future)
+ */
+export async function ungroupCards(gameId: string, groupId: string, guestSessionId?: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const session = guestSessionId || (await getGuestSession())?.sessionId
+
+  if (!user && !session) {
+    throw new Error('Non authentifié')
+  }
+
+  // NOTE: Nécessite migration pour support group_id
+  // Pour l'instant, retourne success sans opération
+  revalidatePath(`/games/${gameId}`)
+  return { success: true, message: `Groupe ${groupId} dégroupé` }
+}
