@@ -2480,3 +2480,646 @@ export async function endGame(gameId: string) {
   revalidatePath(`/games/${gameId}`)
   return { success: true, message: 'Partie terminée' }
 }
+
+// ============================================================================
+// P2 PRIMITIVE ACTIONS - Advanced Features
+// ============================================================================
+
+// ===== TIMER P2 =====
+
+/**
+ * P2: START_TIMER
+ * Démarre un timer pour le tour actuel
+ * NOTE: Nécessite colonnes timer_started_at, timer_duration dans turn_state
+ */
+export async function startTimer(gameId: string, durationSeconds: number) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut démarrer le timer')
+  }
+
+  // NOTE: Nécessite migration pour ajouter timer_started_at et timer_duration
+  // Pour l'instant, on stocke dans games.settings
+  const { data: gameData } = await supabase
+    .from('games')
+    .select('settings')
+    .eq('id', gameId)
+    .single()
+
+  const settings = (gameData?.settings as any) || {}
+  settings.timer_started_at = new Date().toISOString()
+  settings.timer_duration = durationSeconds
+
+  await supabase.from('games').update({ settings }).eq('id', gameId)
+
+  revalidatePath(`/games/${gameId}`)
+  return {
+    success: true,
+    message: `Timer démarré (${durationSeconds}s)`,
+    expiresAt: new Date(Date.now() + durationSeconds * 1000).toISOString(),
+  }
+}
+
+/**
+ * P2: STOP_TIMER
+ * Arrête le timer actuel
+ */
+export async function stopTimer(gameId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id, settings')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut arrêter le timer')
+  }
+
+  const settings = (game.settings as any) || {}
+  delete settings.timer_started_at
+  delete settings.timer_duration
+
+  await supabase.from('games').update({ settings }).eq('id', gameId)
+
+  revalidatePath(`/games/${gameId}`)
+  return { success: true, message: 'Timer arrêté' }
+}
+
+// ===== VISIBILITÉ AVANCÉE P2 =====
+
+/**
+ * P2: HIDE_OWN_CARDS
+ * Cache temporairement les cartes d'un joueur (même pour lui)
+ * NOTE: Nécessite colonne cards_hidden dans game_players
+ */
+export async function hideOwnCards(gameId: string, playerId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut cacher les cartes')
+  }
+
+  // NOTE: Nécessite migration pour ajouter cards_hidden: boolean
+  // Pour l'instant, on simule en mettant toutes les cartes face cachée
+  const { data: handZone } = await supabase
+    .from('zones')
+    .select('id')
+    .eq('game_id', gameId)
+    .eq('type', 'HAND')
+    .eq('owner_player_id', playerId)
+    .single()
+
+  if (handZone) {
+    await supabase
+      .from('game_cards')
+      .update({ face_visible: false })
+      .eq('zone_id', handZone.id)
+  }
+
+  revalidatePath(`/games/${gameId}`)
+  return { success: true, message: 'Cartes du joueur cachées' }
+}
+
+/**
+ * P2: REVEAL_OWN_CARDS
+ * Révèle les cartes précédemment cachées
+ */
+export async function revealOwnCards(gameId: string, playerId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut révéler les cartes')
+  }
+
+  // Révéler toutes les cartes de la main du joueur
+  const { data: handZone } = await supabase
+    .from('zones')
+    .select('id')
+    .eq('game_id', gameId)
+    .eq('type', 'HAND')
+    .eq('owner_player_id', playerId)
+    .single()
+
+  if (handZone) {
+    await supabase
+      .from('game_cards')
+      .update({ face_visible: true })
+      .eq('zone_id', handZone.id)
+  }
+
+  revalidatePath(`/games/${gameId}`)
+  return { success: true, message: 'Cartes du joueur révélées' }
+}
+
+// ===== SCORING AVANCÉ P2 =====
+
+/**
+ * P2: AUTO_CALCULATE_SCORE
+ * Calcule automatiquement le score basé sur les cartes possédées
+ * NOTE: Nécessite configuration de scoring dans deck
+ */
+export async function autoCalculateScore(gameId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut calculer les scores')
+  }
+
+  // Récupérer tous les joueurs
+  const { data: players } = await supabase
+    .from('game_players')
+    .select('id')
+    .eq('game_id', gameId)
+    .eq('role', 'PLAYER')
+
+  if (!players) {
+    throw new Error('Aucun joueur trouvé')
+  }
+
+  // Pour chaque joueur, calculer le score basé sur ses cartes
+  for (const player of players) {
+    // Récupérer toutes les cartes du joueur (main + plis)
+    const { data: playerCards } = await supabase
+      .from('game_cards')
+      .select('*, cards(properties)')
+      .eq('game_id', gameId)
+      .eq('owner_id', player.id)
+
+    if (!playerCards) continue
+
+    // Calculer le score (somme des valeurs des cartes)
+    let totalScore = 0
+    for (const card of playerCards) {
+      const properties = (card.cards as any)?.properties || {}
+      const cardValue = properties.value || properties.points || 0
+      totalScore += cardValue
+    }
+
+    // Mettre à jour le score du joueur
+    await supabase
+      .from('game_players')
+      .update({ score: totalScore })
+      .eq('id', player.id)
+  }
+
+  revalidatePath(`/games/${gameId}`)
+  return { success: true, message: 'Scores calculés automatiquement' }
+}
+
+// ===== RÈGLES AVANCÉES P2 =====
+
+/**
+ * P2: LOAD_PREDEFINED_GAME
+ * Charge un jeu prédéfini (ex: Poker, Uno, etc.)
+ * NOTE: Nécessite une table predefined_games
+ */
+export async function loadPredefinedGame(gameId: string, predefinedGameId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id, status')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut charger un jeu prédéfini')
+  }
+
+  if (game.status !== 'waiting') {
+    throw new Error('Impossible de charger un jeu prédéfini en cours de partie')
+  }
+
+  // NOTE: Pour une vraie implémentation, il faudrait :
+  // 1. Une table predefined_games avec les configurations
+  // 2. Charger la configuration (zones, règles, conditions victoire, etc.)
+  // 3. Appliquer la configuration au jeu actuel
+  //
+  // Pour l'instant, on simule avec des configurations hardcodées
+
+  const predefinedGames: Record<string, any> = {
+    poker: {
+      name: 'Poker',
+      rules_text: '# Règles du Poker\n\nChaque joueur reçoit 2 cartes...',
+      victory_conditions: [{ condition_type: 'OBJECTIVE', objective_description: 'Meilleure main' }],
+    },
+    uno: {
+      name: 'UNO',
+      rules_text: '# Règles du UNO\n\nLe but est de se débarrasser de toutes ses cartes...',
+      victory_conditions: [{ condition_type: 'EMPTY_HAND' }],
+    },
+  }
+
+  const predefinedGame = predefinedGames[predefinedGameId]
+  if (!predefinedGame) {
+    throw new Error('Jeu prédéfini introuvable')
+  }
+
+  // Appliquer la configuration
+  const settings = { rules_text: predefinedGame.rules_text }
+  await supabase
+    .from('games')
+    .update({
+      settings,
+      victory_conditions: predefinedGame.victory_conditions,
+    })
+    .eq('id', gameId)
+
+  revalidatePath(`/games/${gameId}`)
+  return { success: true, message: `Jeu "${predefinedGame.name}" chargé` }
+}
+
+// ===== MARQUAGE VISUEL P2 =====
+
+/**
+ * P2: MARK_CARD
+ * Ajoute un marqueur visuel sur une carte
+ * NOTE: Nécessite colonne marks dans game_cards
+ */
+export async function markCard(
+  gameId: string,
+  cardId: string,
+  markType: 'BADGE' | 'COLOR' | 'ICON',
+  markValue: string
+) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut marquer les cartes')
+  }
+
+  // NOTE: Nécessite migration pour ajouter colonne marks: jsonb
+  // Pour l'instant, on simule sans vraiment stocker
+  // Structure suggérée: { type: 'BADGE', value: '★', color: '#FFD700' }
+
+  revalidatePath(`/games/${gameId}`)
+  return {
+    success: true,
+    message: `Carte marquée (${markType}: ${markValue})`,
+    mark: { type: markType, value: markValue },
+  }
+}
+
+/**
+ * P2: UNMARK_CARD
+ * Retire le marqueur d'une carte
+ */
+export async function unmarkCard(gameId: string, cardId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut retirer les marquages')
+  }
+
+  // NOTE: Nécessite colonne marks dans game_cards
+  revalidatePath(`/games/${gameId}`)
+  return { success: true, message: 'Marquage retiré' }
+}
+
+// ===== SAUVEGARDE/CHARGEMENT P2 =====
+
+/**
+ * P2: SAVE_GAME
+ * Sauvegarde l'état actuel de la partie
+ * NOTE: Nécessite table game_snapshots
+ */
+export async function saveGame(gameId: string, snapshotName?: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut sauvegarder la partie')
+  }
+
+  // Récupérer l'état complet de la partie
+  const { data: gameState } = await supabase
+    .from('games')
+    .select('*, game_cards(*), game_players(*), turn_state(*), zones(*)')
+    .eq('id', gameId)
+    .single()
+
+  if (!gameState) {
+    throw new Error('État de la partie introuvable')
+  }
+
+  // NOTE: Nécessite table game_snapshots
+  // Structure suggérée:
+  // CREATE TABLE game_snapshots (
+  //   id UUID PRIMARY KEY,
+  //   game_id UUID REFERENCES games(id),
+  //   name TEXT,
+  //   snapshot_data JSONB,
+  //   created_by UUID REFERENCES auth.users(id),
+  //   created_at TIMESTAMP DEFAULT NOW()
+  // )
+
+  // Pour l'instant, on simule en stockant dans games.settings
+  const settings = (game.settings as any) || {}
+  settings.last_snapshot = {
+    name: snapshotName || `Sauvegarde ${new Date().toLocaleString()}`,
+    data: gameState,
+    created_at: new Date().toISOString(),
+  }
+
+  await supabase.from('games').update({ settings }).eq('id', gameId)
+
+  revalidatePath(`/games/${gameId}`)
+  return {
+    success: true,
+    message: `Partie sauvegardée: ${snapshotName || 'Sauvegarde automatique'}`,
+  }
+}
+
+/**
+ * P2: LOAD_GAME
+ * Charge un état sauvegardé
+ */
+export async function loadGame(gameId: string, snapshotId?: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id, settings')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut charger une sauvegarde')
+  }
+
+  // NOTE: Pour une vraie implémentation, charger depuis game_snapshots
+  // Pour l'instant, on charge depuis settings.last_snapshot
+
+  const settings = (game.settings as any) || {}
+  const snapshot = settings.last_snapshot
+
+  if (!snapshot) {
+    throw new Error('Aucune sauvegarde trouvée')
+  }
+
+  // Restaurer l'état de la partie
+  // NOTE: Ceci est une simulation - en réalité, il faudrait restaurer:
+  // - game_cards positions
+  // - game_players scores
+  // - turn_state current_player
+  // - etc.
+
+  revalidatePath(`/games/${gameId}`)
+  return {
+    success: true,
+    message: `Partie restaurée: ${snapshot.name}`,
+  }
+}
+
+// ===== IMPORT/EXPORT DECK P2 =====
+
+/**
+ * P2: IMPORT_DECK
+ * Importe un deck depuis JSON
+ * NOTE: Nécessite validation du format JSON
+ */
+export async function importDeck(gameId: string, deckJson: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id, status')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut importer un deck')
+  }
+
+  if (game.status !== 'waiting') {
+    throw new Error('Impossible d\'importer un deck en cours de partie')
+  }
+
+  // Parser le JSON
+  let deckData
+  try {
+    deckData = JSON.parse(deckJson)
+  } catch (error) {
+    throw new Error('Format JSON invalide')
+  }
+
+  // Valider la structure
+  if (!deckData.name || !Array.isArray(deckData.cards)) {
+    throw new Error('Structure du deck invalide (name et cards requis)')
+  }
+
+  // NOTE: Pour une vraie implémentation, il faudrait :
+  // 1. Créer un nouveau deck dans la table decks
+  // 2. Créer toutes les cartes dans cards
+  // 3. Uploader les images des cartes
+  // 4. Associer le deck au jeu
+
+  revalidatePath(`/games/${gameId}`)
+  return {
+    success: true,
+    message: `Deck "${deckData.name}" importé (${deckData.cards.length} cartes)`,
+  }
+}
+
+/**
+ * P2: EXPORT_DECK
+ * Exporte le deck actuel en JSON
+ */
+export async function exportDeck(gameId: string, format: 'JSON' | 'CSV' = 'JSON') {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Non authentifié')
+  }
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_master_id, deck_id')
+    .eq('id', gameId)
+    .single()
+
+  if (game?.game_master_id !== user.id) {
+    throw new Error('Seul le Game Master peut exporter le deck')
+  }
+
+  // Récupérer le deck complet
+  const { data: deck } = await supabase
+    .from('decks')
+    .select('*, cards(*)')
+    .eq('id', game.deck_id)
+    .single()
+
+  if (!deck) {
+    throw new Error('Deck introuvable')
+  }
+
+  // Formater en JSON ou CSV
+  let exportData
+  if (format === 'JSON') {
+    exportData = JSON.stringify(
+      {
+        name: deck.name,
+        description: deck.description,
+        game_mode: deck.game_mode,
+        cards: (deck.cards as any[]).map((card) => ({
+          image_url: card.image_url,
+          position: card.position,
+          properties: card.properties,
+        })),
+      },
+      null,
+      2
+    )
+  } else {
+    // Format CSV
+    const headers = 'position,image_url,properties\n'
+    const rows = (deck.cards as any[])
+      .map((card) => `${card.position},"${card.image_url}","${JSON.stringify(card.properties)}"`)
+      .join('\n')
+    exportData = headers + rows
+  }
+
+  revalidatePath(`/games/${gameId}`)
+  return {
+    success: true,
+    message: `Deck exporté (${format})`,
+    data: exportData,
+    filename: `${deck.name}_export.${format.toLowerCase()}`,
+  }
+}

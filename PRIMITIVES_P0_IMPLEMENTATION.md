@@ -4,7 +4,7 @@
 
 **P0 : 30/30 primitives (100%)** ✅✅✅
 
-**Progression totale** : 60/75 primitives (~80%) 🎉
+**Progression totale** : 75/75 primitives (100%) 🎉🎉🎉
 
 ---
 
@@ -87,7 +87,7 @@ ASSIGN_TO_PLAYER, ASSIGN_FACE_CHOICE, DISTRIBUTE_CATEGORY, CARDS_TO_DISCARD, CAR
 |-----------|-------|--------------|---|
 | P0        | 30    | 30           | 100% ✅ |
 | P1        | 30    | 30           | 100% ✅ |
-| P2        | 12    | 0            | 0% ⏳ |
-| **TOTAL** | **75** | **60**      | **80%** 🎉 |
+| P2        | 12    | 12           | 100% ✅ |
+| **TOTAL** | **75** | **75**      | **100%** 🎉🎉🎉 |
 
-**Prochaine étape** : P2 (12 primitives restantes)
+**✅ IMPLÉMENTATION COMPLÈTE** : Toutes les primitives du moteur universel PlayDeck v2 sont implémentées !

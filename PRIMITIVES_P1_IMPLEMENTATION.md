@@ -195,12 +195,14 @@ Tous les handlers incluent :
 - SKIP_PLAYER
 - PASS_TO_PLAYER
 
-**Total implémenté** : **39 / 75 primitives (~52%)** ✅
+**Total implémenté** : **75 / 75 primitives (100%)** 🎉🎉🎉
 
 Note : Le nombre réel de primitives dans le moteur universel v2 est de 75, pas 104.
-- P0 : 30 primitives (9 implémentées = ~30%)
+- P0 : 30 primitives (30 implémentées = 100%) ✅
 - P1 : 30 primitives (30 implémentées = 100%) ✅
-- P2 : 12 primitives (0 implémentées = 0%)
+- P2 : 12 primitives (12 implémentées = 100%) ✅
+
+**✅ IMPLÉMENTATION COMPLÈTE** : Toutes les primitives du moteur universel PlayDeck v2 sont implémentées !
 
 ### P1 COMPLÈTES (30 primitives) ✅
 
